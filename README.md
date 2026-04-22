@@ -63,6 +63,43 @@ Quick timing snapshot from the WSL2 GPU run:
 | `Qiskit Aer` CPU vs GPU speedup | `0.857x` to `1.036x` |
 | Interpretation | GPU path works, but this short profile is too small to expose a clear win |
 
+### Qiskit Aer CPU vs GPU snapshot
+
+From the current `WSL2` GPU-oriented run:
+
+| Family | Qubits | Precision | CPU median `wall_s` | GPU median `wall_s` | CPU/GPU ratio |
+|---|---:|---|---:|---:|---:|
+| `ghz` | 8 | `double` | `8.705` | `9.065` | `0.960x` |
+| `ghz` | 12 | `double` | `8.803` | `8.853` | `0.994x` |
+| `random` | 8 | `double` | `8.816` | `8.930` | `0.987x` |
+| `random` | 12 | `double` | `8.712` | `8.792` | `0.991x` |
+| `qft` | 8 | `double` | `9.428` | `9.241` | `1.020x` |
+| `qft` | 12 | `double` | `9.199` | `9.220` | `0.998x` |
+| `ansatz` | 8 | `double` | `8.904` | `10.168` | `0.876x` |
+| `ansatz` | 12 | `double` | `9.065` | `9.233` | `0.982x` |
+| `trotter` | 8 | `double` | `9.150` | `9.170` | `0.998x` |
+| `trotter` | 12 | `double` | `9.027` | `9.161` | `0.985x` |
+
+Takeaway:
+
+- in this small development profile, `Qiskit Aer GPU` is working but not yet clearly faster than CPU;
+- the run is still dominated by fixed overhead, so these numbers should be treated as pipeline validation, not final hardware characterization.
+
+## Why WSL2 Instead Of Native Windows GPU
+
+For the current machine and tested stack, `WSL2` was the only path that produced a real NVIDIA-backed run with `Qiskit Aer GPU`.
+
+In the measured setup:
+
+- native Windows CPU runs worked well for `Qiskit Aer`, `Qulacs`, and `PennyLane`;
+- native Windows GPU runs failed across the tested backends;
+- `WSL2` with Ubuntu and `qiskit==1.4.5` plus `qiskit-aer-gpu` successfully executed GPU simulations on the `RTX 3050`.
+
+Practical conclusion:
+
+- use Windows native for fast development and CPU-side validation;
+- use `WSL2` or Ubuntu native when the actual goal is evaluating NVIDIA GPU behavior.
+
 ## How To Reproduce The Current Results
 
 ### Windows dev run
@@ -344,6 +381,15 @@ Interpretation:
 - The GPU study is not complete yet. It currently has strong evidence for `Qiskit Aer GPU` in WSL2, but not yet for `Qulacs GPU` or `PennyLane lightning.gpu`.
 - Some fidelity values are suspicious, especially around `QFT`. That likely indicates a harness-side issue such as qubit ordering or backend mapping, not necessarily a simulator failure.
 - The current development profiles are intentionally small and include substantial startup overhead. They validate the pipeline, but they are not yet the final hardware characterization methodology.
+
+## Limitations
+
+- The current benchmark harness still has noticeable fixed overhead from process startup and framework initialization, especially in GPU-oriented runs.
+- The present GPU evidence is strongest for `Qiskit Aer` in `WSL2`; it is not yet a broad statement about every simulator.
+- `qulacs-gpu` is not part of the measured Linux GPU results yet, because the current environment did not include the required build toolchain.
+- `PennyLane lightning.gpu` is not part of the measured success path yet on this machine.
+- Some correctness metrics, especially around `QFT`, likely still contain backend-ordering or reference-comparison issues.
+- The current measured profiles stop at small qubit counts and are meant for validation and preliminary comparison, not final publication-grade claims.
 
 ## Recommended next steps
 
