@@ -1,5 +1,11 @@
 # Quantum Bench
 
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](#installation)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20WSL2%20%7C%20Ubuntu-0A7E8C)](#installation)
+[![GPU](https://img.shields.io/badge/NVIDIA-WSL2%20validated-76B900?logo=nvidia&logoColor=white)](#current-results-on-this-machine)
+[![Status](https://img.shields.io/badge/status-MVP-orange)](#current-mvp-scope)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./pyproject.toml)
+
 Portable CPU/GPU benchmark harness for quantum circuit simulation, built to compare local development machines against stronger NVIDIA workstations later.
 
 The project is organized around two ideas:
@@ -15,6 +21,47 @@ The project is organized around two ideas:
 - Compares results against a small exact reference simulator for correctness checks
 - Writes CSV and JSON artifacts for later analysis
 - Generates plots from result directories
+
+## Quick Results
+
+These numbers come from the current development machine and are preliminary.
+
+| Environment | Stack | Scope | Outcome |
+|---|---|---|---|
+| Windows native | `Qiskit Aer`, `Qulacs`, `PennyLane` CPU | Small `dev` profile | CPU path worked across all three stacks |
+| Windows native | GPU paths | Small `dev` profile | No working native GPU backend in the tested setup |
+| WSL2 Ubuntu | `Qiskit Aer` CPU/GPU | `dev-wsl-gpu` profile | Real NVIDIA GPU execution worked |
+| WSL2 Ubuntu | `Qiskit Aer` GPU speedup | `8-12` qubits | GPU mostly tied with CPU or slightly slower |
+| WSL2 Ubuntu | `Qulacs` | `dev-wsl-gpu` profile | Not installed in the measured run |
+
+Quick timing snapshot from the Windows CPU run:
+
+| Library | Median wall time |
+|---|---:|
+| `Qulacs` | `~0.103 s` |
+| `Qiskit Aer` | `~0.77-0.82 s` |
+| `PennyLane Lightning` | `~2.35-2.46 s` |
+
+Quick timing snapshot from the WSL2 GPU run:
+
+| Stack | Range |
+|---|---|
+| `Qiskit Aer` CPU vs GPU speedup | `0.857x` to `1.036x` |
+| Interpretation | GPU path works, but this short profile is too small to expose a clear win |
+
+## Plots
+
+### WSL2 GPU: CPU vs GPU speedup
+
+![WSL2 GPU speedup plot](docs/assets/gpu_cpu_speedup_wsl_qiskit.png)
+
+### WSL2 GPU: time vs qubits
+
+![WSL2 time vs qubits plot](docs/assets/time_vs_qubits_wsl_qiskit.png)
+
+### Windows dev: time vs qubits
+
+![Windows dev time vs qubits plot](docs/assets/time_vs_qubits_windows_dev.png)
 
 ## Current MVP scope
 
@@ -255,6 +302,19 @@ Interpretation:
 - Expand the WSL2 GPU profile to larger qubit counts
 - Add a working `qulacs-gpu` toolchain in WSL2
 - Re-run the full campaign on the stronger target workstation
+
+## Roadmap
+
+- `v0.2`
+  Fix correctness issues in the reference comparison layer, especially around `QFT` and possible qubit-ordering mismatches.
+- `v0.3`
+  Improve GPU methodology by reducing per-case startup overhead and expanding WSL2 GPU campaigns to larger qubit counts.
+- `v0.4`
+  Bring up `qulacs-gpu` and, if possible, `PennyLane lightning.gpu` on the Linux path.
+- `v0.5`
+  Run the `full` profile on the stronger target workstation and publish a cleaner benchmark report.
+- `v1.0`
+  Add a stable comparison set across CPU, GPU, correctness, and resource usage with reproducible published artifacts.
 
 ## Notes
 
