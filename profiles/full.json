@@ -1,0 +1,117 @@
+{
+  "profile_name": "full",
+  "execution_env": "ubuntu_gpu_full",
+  "preliminary": false,
+  "results_dir": "results/full",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 2,
+    "repeats": 10,
+    "thread_modes": ["single", "all"],
+    "timeouts": {
+      "case_s": 600
+    },
+    "memory_limits": {
+      "ram_fraction": 0.75,
+      "vram_fraction": 0.80,
+      "overhead_factor": 1.5
+    }
+  },
+  "benchmarks": [
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["CPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "qft", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 4, "step": 4, "cap": 32 },
+        "qft": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 4, "step": 4, "cap": 28 },
+        "random": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 8, "step": 4, "cap": 30 },
+        "ansatz": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 8, "step": 4, "cap": 30 },
+        "trotter": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 8, "step": 4, "cap": 28 }
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6,
+        "trotter": 12
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202, 303, 404, 505],
+        "ansatz": [101, 202, 303, 404, 505],
+        "trotter": [101, 202, 303, 404, 505]
+      }
+    },
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["GPU"],
+      "precisions": ["double", "single"],
+      "families": ["ghz", "qft", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 8, "step": 4, "cap": 30 },
+        "qft": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 8, "step": 4, "cap": 26 },
+        "random": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 30 },
+        "ansatz": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 30 },
+        "trotter": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 28 }
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6,
+        "trotter": 12
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202, 303, 404, 505],
+        "ansatz": [101, 202, 303, 404, 505],
+        "trotter": [101, 202, 303, 404, 505]
+      }
+    },
+    {
+      "library": "qulacs",
+      "backend": "qulacs_statevector",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz"],
+      "qubit_grid": {
+        "ghz": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 4, "step": 4, "cap": 32 },
+        "random": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 8, "step": 4, "cap": 30 },
+        "ansatz": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 30 }
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202, 303, 404, 505],
+        "ansatz": [101, 202, 303, 404, 505]
+      }
+    },
+    {
+      "library": "pennylane",
+      "backend": "lightning",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": { "source": "capability_probe", "resource": "cpu_statevector_double", "start": 4, "step": 4, "cap": 28 },
+        "random": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 28 },
+        "ansatz": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 28 },
+        "trotter": { "source": "capability_probe", "resource": "gpu_statevector_double", "start": 12, "step": 2, "cap": 28 }
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6,
+        "trotter": 12
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202, 303, 404, 505],
+        "ansatz": [101, 202, 303, 404, 505],
+        "trotter": [101, 202, 303, 404, 505]
+      }
+    }
+  ]
+}

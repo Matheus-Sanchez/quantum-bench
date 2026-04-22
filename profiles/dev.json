@@ -1,0 +1,114 @@
+{
+  "profile_name": "dev",
+  "execution_env": "windows_wsl_dev",
+  "preliminary": true,
+  "results_dir": "results/dev",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 2,
+    "repeats": 3,
+    "thread_modes": ["single", "all"],
+    "timeouts": {
+      "case_s": 120
+    },
+    "memory_limits": {
+      "ram_fraction": 0.65,
+      "vram_fraction": 0.70,
+      "overhead_factor": 1.4
+    }
+  },
+  "benchmarks": [
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["CPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "qft", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [4, 8],
+        "random": [4, 8],
+        "qft": [4, 8],
+        "ansatz": [4, 8],
+        "trotter": [4, 8]
+      },
+      "depths": {
+        "random": 4,
+        "ansatz": 4,
+        "trotter": 6
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202],
+        "ansatz": [101, 202],
+        "trotter": [101, 202]
+      }
+    },
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["GPU"],
+      "precisions": ["double", "single"],
+      "families": ["ghz", "random", "qft", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [4, 8],
+        "random": [4, 8],
+        "qft": [4, 8],
+        "ansatz": [4, 8],
+        "trotter": [4, 8]
+      },
+      "depths": {
+        "random": 4,
+        "ansatz": 4,
+        "trotter": 6
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202],
+        "ansatz": [101, 202],
+        "trotter": [101, 202]
+      }
+    },
+    {
+      "library": "qulacs",
+      "backend": "qulacs_statevector",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random"],
+      "qubit_grid": {
+        "ghz": [4, 8],
+        "random": [4, 8]
+      },
+      "depths": {
+        "random": 4
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202]
+      }
+    },
+    {
+      "library": "pennylane",
+      "backend": "lightning",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [4, 8],
+        "random": [4, 8],
+        "ansatz": [4, 8],
+        "trotter": [4, 8]
+      },
+      "depths": {
+        "random": 4,
+        "ansatz": 4,
+        "trotter": 6
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202],
+        "ansatz": [101, 202],
+        "trotter": [101, 202]
+      }
+    }
+  ]
+}

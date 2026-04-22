@@ -1,0 +1,65 @@
+{
+  "profile_name": "dev-wsl-gpu",
+  "execution_env": "wsl2_ubuntu_gpu_dev",
+  "preliminary": true,
+  "results_dir": "results/dev-wsl-gpu",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 2,
+    "repeats": 3,
+    "thread_modes": ["all"],
+    "timeouts": {
+      "case_s": 180
+    },
+    "memory_limits": {
+      "ram_fraction": 0.65,
+      "vram_fraction": 0.70,
+      "overhead_factor": 1.4
+    }
+  },
+  "benchmarks": [
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double", "single"],
+      "families": ["ghz", "random", "qft", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [8, 12],
+        "random": [8, 12],
+        "qft": [8, 12],
+        "ansatz": [8, 12],
+        "trotter": [8, 12]
+      },
+      "depths": {
+        "random": 6,
+        "ansatz": 6,
+        "trotter": 8
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202],
+        "ansatz": [101, 202],
+        "trotter": [101, 202]
+      }
+    },
+    {
+      "library": "qulacs",
+      "backend": "qulacs_statevector",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random"],
+      "qubit_grid": {
+        "ghz": [8, 12],
+        "random": [8, 12]
+      },
+      "depths": {
+        "random": 6
+      },
+      "seeds": {
+        "default": [101],
+        "random": [101, 202]
+      }
+    }
+  ]
+}
