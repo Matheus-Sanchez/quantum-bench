@@ -6,7 +6,11 @@
 [![Status](https://img.shields.io/badge/status-MVP-orange)](#current-mvp-scope)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./pyproject.toml)
 
-Portable CPU/GPU benchmark harness for quantum circuit simulation, built to compare local development machines against stronger NVIDIA workstations later.
+Portable benchmark harness for quantum circuit simulation across CPU and NVIDIA GPU environments, designed for reproducible local validation on Windows/WSL2 and later migration to stronger Ubuntu workstations.
+
+**Short description**
+
+Quantum Bench standardizes how quantum circuit simulators are executed, measured, and compared across development and target machines, with emphasis on `Qiskit Aer`, `Qulacs`, `PennyLane Lightning`, and the practical behavior of NVIDIA-backed simulation paths.
 
 The project is organized around two ideas:
 
@@ -25,6 +29,16 @@ The project is organized around two ideas:
 ## Quick Results
 
 These numbers come from the current development machine and are preliminary.
+
+### Environment comparison
+
+| Dimension | Windows dev | WSL2 GPU |
+|---|---|---|
+| Primary goal | CPU validation and pipeline smoke testing | Real NVIDIA GPU execution path |
+| Working CPU stacks | `Qiskit Aer`, `Qulacs`, `PennyLane` | `Qiskit Aer` |
+| Working GPU stacks | none in the measured setup | `Qiskit Aer GPU` |
+| Current usefulness | fast local development baseline | practical NVIDIA test bed on this machine |
+| Main limitation | native GPU backends unavailable | short profile still dominated by fixed overhead |
 
 | Environment | Stack | Scope | Outcome |
 |---|---|---|---|
@@ -48,6 +62,42 @@ Quick timing snapshot from the WSL2 GPU run:
 |---|---|
 | `Qiskit Aer` CPU vs GPU speedup | `0.857x` to `1.036x` |
 | Interpretation | GPU path works, but this short profile is too small to expose a clear win |
+
+## How To Reproduce The Current Results
+
+### Windows dev run
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -U pip setuptools wheel
+python -m pip install psutil matplotlib pynvml qiskit qiskit-aer qulacs pennylane pennylane-lightning
+python -m quantum_bench env-report --output artifacts/env-report-win-venv.json
+python -m quantum_bench capability-probe --output artifacts/capabilities-win-venv.json
+python -m quantum_bench run --profile profiles/dev.json --capabilities artifacts/capabilities-win-venv.json
+python -m quantum_bench plot --input-dir results/dev/<run-dir> --output-dir plots/dev-<run-dir>
+```
+
+### WSL2 GPU run
+
+```bash
+python3 -m venv .venv-wsl
+source .venv-wsl/bin/activate
+python -m pip install -U pip setuptools wheel
+python -m pip install psutil matplotlib pynvml
+python -m pip install qiskit==1.4.5 qiskit-aer-gpu
+python -m quantum_bench env-report --output artifacts/env-report-wsl-gpu.json
+python -m quantum_bench capability-probe --output artifacts/capabilities-wsl-gpu.json
+python -m quantum_bench run --profile profiles/dev-wsl-gpu.json --capabilities artifacts/capabilities-wsl-gpu.json
+python -m quantum_bench plot --input-dir results/dev-wsl-gpu/<run-dir> --output-dir plots/dev-wsl-gpu-<run-dir>
+```
+
+### Current measured runs in this repository
+
+- Windows CPU-focused run:
+  [results/dev/dev-windows_wsl_dev-2026-04-22T020839+0000](results/dev/dev-windows_wsl_dev-2026-04-22T020839+0000/manifest.json)
+- WSL2 GPU-focused run:
+  [results/dev-wsl-gpu/dev-wsl-gpu-wsl2_ubuntu_gpu_dev-2026-04-22T025554+0000](results/dev-wsl-gpu/dev-wsl-gpu-wsl2_ubuntu_gpu_dev-2026-04-22T025554+0000/manifest.json)
 
 ## Plots
 
