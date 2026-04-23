@@ -7,8 +7,10 @@ from quantum_bench.capability import build_capability_report
 from quantum_bench.config import expand_cases, load_profile, profile_requires_capabilities
 from quantum_bench.env_report import build_env_report
 from quantum_bench.plotting import generate_plots
+from quantum_bench.reporting import build_analysis_report
 from quantum_bench.runner import build_result_dir, run_profile, write_child_output
 from quantum_bench.utils import ensure_directory, load_json, write_json
+from quantum_bench.wsl_runner import run_profile_wsl
 
 
 def _command_env_report(args: argparse.Namespace) -> int:
@@ -61,6 +63,36 @@ def _command_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_run_wsl(args: argparse.Namespace) -> int:
+    profile = load_profile(args.profile)
+    if args.dry_run:
+        capability_report = None
+        if args.capabilities:
+            capability_report = load_json(Path(args.capabilities))
+        cases = expand_cases(profile, capability_report=capability_report, limit=args.limit)
+        print(f"Expanded {len(cases)} cases")
+        for case in cases[: min(10, len(cases))]:
+            print(
+                f"{case.library} {case.family} {case.qubits}q {case.device} {case.precision} "
+                f"{case.thread_mode} {'warmup' if case.warmup else f'rep{case.repeat_index}'}"
+            )
+        return 0
+
+    outcome = run_profile_wsl(
+        profile,
+        repo_root=Path(args.repo_root),
+        capabilities_path=Path(args.capabilities) if args.capabilities else None,
+        env_report_path=Path(args.env_report) if args.env_report else None,
+        results_dir=args.results_dir,
+        limit=args.limit,
+        python_path=args.wsl_python,
+        distro=args.distro,
+        transport_retries=args.transport_retries,
+    )
+    print(f"WSL run completed in {outcome['result_dir']}")
+    return 0
+
+
 def _command_plot(args: argparse.Namespace) -> int:
     report = generate_plots(Path(args.input_dir), Path(args.output_dir))
     if report.get("plots_generated"):
@@ -70,6 +102,15 @@ def _command_plot(args: argparse.Namespace) -> int:
             "Generated summary only in "
             f"{report['output_dir']} because matplotlib is not installed"
         )
+    return 0
+
+
+def _command_report(args: argparse.Namespace) -> int:
+    output_dir = Path(args.output_dir) if args.output_dir else None
+    report = build_analysis_report(Path(args.input_dir), output_dir)
+    print(
+        f"Wrote analysis summary to {report['summary_path']} and markdown report to {report['report_path']}"
+    )
     return 0
 
 
@@ -101,10 +142,28 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--dry-run", action="store_true")
     run.set_defaults(func=_command_run)
 
+    run_wsl = subparsers.add_parser("run-wsl", help="Run a benchmark profile from Windows by invoking one case at a time inside WSL")
+    run_wsl.add_argument("--profile", required=True)
+    run_wsl.add_argument("--capabilities")
+    run_wsl.add_argument("--env-report")
+    run_wsl.add_argument("--results-dir")
+    run_wsl.add_argument("--limit", type=int)
+    run_wsl.add_argument("--dry-run", action="store_true")
+    run_wsl.add_argument("--repo-root", default=".")
+    run_wsl.add_argument("--distro")
+    run_wsl.add_argument("--wsl-python", default=".venv-wsl/bin/python")
+    run_wsl.add_argument("--transport-retries", type=int, default=1)
+    run_wsl.set_defaults(func=_command_run_wsl)
+
     plot = subparsers.add_parser("plot", help="Generate plots from result directories")
     plot.add_argument("--input-dir", required=True)
     plot.add_argument("--output-dir", required=True)
     plot.set_defaults(func=_command_plot)
+
+    report = subparsers.add_parser("report", help="Generate JSON and Markdown analysis from a result directory")
+    report.add_argument("--input-dir", required=True)
+    report.add_argument("--output-dir")
+    report.set_defaults(func=_command_report)
 
     internal = subparsers.add_parser("_internal-run-case")
     internal.add_argument("--payload", required=True)

@@ -44,11 +44,13 @@ def _cuda_version() -> str | None:
 
 
 def build_env_report() -> dict[str, Any]:
+    qiskit_aer_version = package_version("qiskit-aer") or package_version("qiskit-aer-gpu")
     total_ram, available_ram = system_memory_bytes()
     packages = {
         "quantum-bench": package_version("quantum-bench"),
         "qiskit": package_version("qiskit"),
-        "qiskit-aer": package_version("qiskit-aer"),
+        "qiskit-aer": qiskit_aer_version,
+        "qiskit-aer-gpu": package_version("qiskit-aer-gpu"),
         "qulacs": package_version("qulacs"),
         "pennylane": package_version("pennylane"),
         "pennylane-lightning": package_version("pennylane-lightning"),

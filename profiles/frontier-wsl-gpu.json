@@ -1,0 +1,92 @@
+{
+  "profile_name": "frontier-wsl-gpu",
+  "execution_env": "wsl2_ubuntu_gpu_frontier",
+  "preliminary": false,
+  "frontier_stop_on_failure": true,
+  "results_dir": "results/frontier-wsl-gpu",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 1,
+    "repeats": 3,
+    "thread_modes": ["all"],
+    "timeouts": {
+      "case_s": 900
+    },
+    "memory_limits": {
+      "ram_fraction": 0.75,
+      "vram_fraction": 0.80,
+      "overhead_factor": 1.5
+    }
+  },
+  "benchmarks": [
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["CPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 28, 29],
+        "random": [20, 22, 24, 26, 28, 29],
+        "ansatz": [20, 22, 24, 26, 28, 29],
+        "trotter": [20, 22, 24, 26, 28, 29]
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6,
+        "trotter": 12
+      },
+      "memory_limits": {
+        "ram_source": "total"
+      },
+      "seeds": {
+        "ghz": [101],
+        "default": [101, 202]
+      }
+    },
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [18, 20, 22, 24, 26, 27, 28],
+        "random": [18, 20, 22, 24, 26, 27, 28],
+        "ansatz": [18, 20, 22, 24, 26, 27, 28],
+        "trotter": [18, 20, 22, 24, 26, 27, 28]
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6,
+        "trotter": 12
+      },
+      "seeds": {
+        "ghz": [101],
+        "default": [101, 202]
+      }
+    },
+    {
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "devices": ["GPU"],
+      "precisions": ["single"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 27, 28, 29],
+        "random": [20, 22, 24, 26, 27, 28, 29],
+        "ansatz": [20, 22, 24, 26, 27, 28, 29],
+        "trotter": [20, 22, 24, 26, 27, 28, 29]
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6,
+        "trotter": 12
+      },
+      "seeds": {
+        "ghz": [101],
+        "default": [101, 202]
+      }
+    }
+  ]
+}

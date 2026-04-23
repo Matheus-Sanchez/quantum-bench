@@ -1,0 +1,142 @@
+{
+  "machine": {
+    "name": "Current development workstation",
+    "platform": "WSL2 Ubuntu 24.04 on Windows",
+    "gpu": "NVIDIA RTX A2000 12GB",
+    "driver": "581.42",
+    "cuda": "13.0"
+  },
+  "software": {
+    "python": "3.12.3",
+    "qiskit": "1.4.5",
+    "qiskit_aer": "0.15.1"
+  },
+  "methodology": {
+    "canonical_campaign": "clean-start per-slice frontier runs from the Windows host into WSL2",
+    "secondary_campaign": "sustained multi-slice batch run used as endurance/stability signal, not as the canonical ceiling",
+    "notes": [
+      "Each clean-start slice isolates one (device, precision, family) combination.",
+      "Warmups and repeats are recorded, and frontier pruning stops retesting clearly unstable qubit levels.",
+      "Raw timestamped outputs remain local under gitignored results/ and plots/ directories.",
+      "The GitHub-safe record is this curated JSON plus the report in docs/reports/current-machine-frontier.md."
+    ]
+  },
+  "frontier": [
+    {
+      "device": "CPU",
+      "precision": "double",
+      "family": "ghz",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "29q unstable in the measured grid"
+    },
+    {
+      "device": "CPU",
+      "precision": "double",
+      "family": "random",
+      "stable_max_qubits_measured": 20,
+      "highest_qubits_tested": 29,
+      "status": "stability dropped sharply after 20q"
+    },
+    {
+      "device": "CPU",
+      "precision": "double",
+      "family": "ansatz",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "29q unstable in the measured grid"
+    },
+    {
+      "device": "CPU",
+      "precision": "double",
+      "family": "trotter",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "29q unstable in the measured grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "double",
+      "family": "ghz",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "28q stable; dedicated 29q probe failed"
+    },
+    {
+      "device": "GPU",
+      "precision": "double",
+      "family": "random",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 28,
+      "status": "stable through the top of the tested grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "double",
+      "family": "ansatz",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 28,
+      "status": "stable through the top of the tested grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "double",
+      "family": "trotter",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 28,
+      "status": "stable through the top of the tested grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "single",
+      "family": "ghz",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "29q unstable in the measured grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "single",
+      "family": "random",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "29q unstable in the measured grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "single",
+      "family": "ansatz",
+      "stable_max_qubits_measured": 28,
+      "highest_qubits_tested": 29,
+      "status": "29q unstable in the measured grid"
+    },
+    {
+      "device": "GPU",
+      "precision": "single",
+      "family": "trotter",
+      "stable_max_qubits_measured": 20,
+      "highest_qubits_tested": 29,
+      "status": "stability dropped sharply after 20q"
+    }
+  ],
+  "highlights": [
+    "The clean-start campaign validated 28q as a repeatable frontier for GHZ on CPU/double, GPU/double, and GPU/single.",
+    "The GPU/double GHZ slice was extended with a dedicated 29q run, which failed during warmup and confirmed 28q as the practical stable ceiling for that slice.",
+    "CPU/double random and GPU/single trotter were the most restrictive workloads in this campaign, stabilizing only up to 20q.",
+    "The sustained multi-slice batch run is still useful as an endurance signal, but it underreports the frontier because WSL degrades under long continuous stress."
+  ],
+  "committed_artifacts": {
+    "report": "docs/reports/current-machine-frontier.md",
+    "hardware": "docs/data/current-machine-hardware.json",
+    "public_repo_guidelines": "docs/reports/public-repo-guidelines.md",
+    "plots": [
+      "docs/assets/current_machine_frontier_overview.png",
+      "docs/assets/current_machine_hardware_overview.png",
+      "docs/assets/frontier_cpu_double_ghz_time_vs_qubits.png",
+      "docs/assets/frontier_gpu_double_ghz_time_vs_qubits.png",
+      "docs/assets/frontier_gpu_double_ghz_ram_vs_qubits.png",
+      "docs/assets/frontier_gpu_double_ghz_vram_vs_qubits.png",
+      "docs/assets/frontier_gpu_single_ghz_time_vs_qubits.png"
+    ]
+  }
+}

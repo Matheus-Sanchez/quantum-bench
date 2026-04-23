@@ -16,6 +16,7 @@ The project is organized around two ideas:
 
 - keep the benchmark pipeline portable across Windows, WSL2, and Ubuntu;
 - separate quick validation runs from heavier hardware-focused campaigns.
+- for frontier-style campaigns on WSL2, prefer a Windows-hosted orchestrator that launches one case at a time inside WSL so a single hard crash does not destroy the whole run.
 
 ## What it does
 
@@ -23,67 +24,79 @@ The project is organized around two ideas:
 - Captures host, package, CUDA, and GPU metadata
 - Measures wall time, CPU time, peak RSS, and GPU memory
 - Compares results against a small exact reference simulator for correctness checks
-- Writes CSV and JSON artifacts for later analysis
+- Writes CSV, JSON, and Markdown artifacts for later analysis
 - Generates plots from result directories
 
-## Quick Results
+## Current Benchmark Report
 
-These numbers come from the current development machine and are preliminary.
+The repository now includes a GitHub-safe benchmark report for the current machine, based on the validated `WSL2 + Qiskit Aer GPU` path and the clean-start frontier methodology.
 
-### Environment comparison
+- Canonical report: [docs/reports/current-machine-frontier.md](docs/reports/current-machine-frontier.md)
+- Structured summary: [docs/data/current-machine-frontier.json](docs/data/current-machine-frontier.json)
+- Hardware specification: [docs/data/current-machine-hardware.json](docs/data/current-machine-hardware.json)
+- Public repo policy: [docs/reports/public-repo-guidelines.md](docs/reports/public-repo-guidelines.md)
 
-| Dimension | Windows dev | WSL2 GPU |
-|---|---|---|
-| Primary goal | CPU validation and pipeline smoke testing | Real NVIDIA GPU execution path |
-| Working CPU stacks | `Qiskit Aer`, `Qulacs`, `PennyLane` | `Qiskit Aer` |
-| Working GPU stacks | none in the measured setup | `Qiskit Aer GPU` |
-| Current usefulness | fast local development baseline | practical NVIDIA test bed on this machine |
-| Main limitation | native GPU backends unavailable | short profile still dominated by fixed overhead |
+Headline frontier from the current machine:
 
-| Environment | Stack | Scope | Outcome |
-|---|---|---|---|
-| Windows native | `Qiskit Aer`, `Qulacs`, `PennyLane` CPU | Small `dev` profile | CPU path worked across all three stacks |
-| Windows native | GPU paths | Small `dev` profile | No working native GPU backend in the tested setup |
-| WSL2 Ubuntu | `Qiskit Aer` CPU/GPU | `dev-wsl-gpu` profile | Real NVIDIA GPU execution worked |
-| WSL2 Ubuntu | `Qiskit Aer` GPU speedup | `8-12` qubits | GPU mostly tied with CPU or slightly slower |
-| WSL2 Ubuntu | `Qulacs` | `dev-wsl-gpu` profile | Not installed in the measured run |
+| Slice | Stable max measured | Highest tested | Reading |
+|---|---:|---:|---|
+| `CPU / double / ghz` | 28 | 29 | `29q` became unstable |
+| `GPU / double / ghz` | 28 | 29 | dedicated `29q` probe failed |
+| `GPU / single / ghz` | 28 | 29 | `29q` became unstable |
+| `CPU / double / random` | 20 | 29 | stability dropped sharply after `20q` |
+| `GPU / single / trotter` | 20 | 29 | stability dropped sharply after `20q` |
 
-Quick timing snapshot from the Windows CPU run:
+Working interpretation:
 
-| Library | Median wall time |
-|---|---:|
-| `Qulacs` | `~0.103 s` |
-| `Qiskit Aer` | `~0.77-0.82 s` |
-| `PennyLane Lightning` | `~2.35-2.46 s` |
+- `WSL2` is the canonical NVIDIA path for this machine.
+- The clean-start per-slice runs are the canonical frontier measurements.
+- The sustained batch campaign is still useful, but it acts more like an endurance test than a clean ceiling measurement.
 
-Quick timing snapshot from the WSL2 GPU run:
+### Public-safe overview
 
-| Stack | Range |
+![Current machine frontier overview](docs/assets/current_machine_frontier_overview.png)
+
+![Current machine hardware overview](docs/assets/current_machine_hardware_overview.png)
+
+### Detailed hardware specification
+
+| Component | Current machine |
 |---|---|
-| `Qiskit Aer` CPU vs GPU speedup | `0.857x` to `1.036x` |
-| Interpretation | GPU path works, but this short profile is too small to expose a clear win |
+| Host OS | `Windows 11 Pro 10.0.26200` |
+| Guest OS | `WSL2 Ubuntu 24.04` on `Linux 6.6.87.2-microsoft-standard-WSL2` |
+| CPU | `Intel Core i7-14700K` |
+| Physical cores / logical threads | `20 / 28` |
+| System RAM | `27.4 GiB` |
+| Safe RAM budget used by the probe | `20.0 GiB` |
+| GPU | `NVIDIA RTX A2000 12GB` |
+| VRAM | `12.0 GiB` |
+| Safe VRAM budget used by the probe | `9.1 GiB` |
+| Driver / CUDA | `581.42 / 13.0` |
+| Python / Qiskit / Aer | `3.12.3 / 1.4.5 / 0.15.1` |
 
-### Qiskit Aer CPU vs GPU snapshot
+### Selected figures
 
-From the current `WSL2` GPU-oriented run:
+CPU double GHZ:
 
-| Family | Qubits | Precision | CPU median `wall_s` | GPU median `wall_s` | CPU/GPU ratio |
-|---|---:|---|---:|---:|---:|
-| `ghz` | 8 | `double` | `8.705` | `9.065` | `0.960x` |
-| `ghz` | 12 | `double` | `8.803` | `8.853` | `0.994x` |
-| `random` | 8 | `double` | `8.816` | `8.930` | `0.987x` |
-| `random` | 12 | `double` | `8.712` | `8.792` | `0.991x` |
-| `qft` | 8 | `double` | `9.428` | `9.241` | `1.020x` |
-| `qft` | 12 | `double` | `9.199` | `9.220` | `0.998x` |
-| `ansatz` | 8 | `double` | `8.904` | `10.168` | `0.876x` |
-| `ansatz` | 12 | `double` | `9.065` | `9.233` | `0.982x` |
-| `trotter` | 8 | `double` | `9.150` | `9.170` | `0.998x` |
-| `trotter` | 12 | `double` | `9.027` | `9.161` | `0.985x` |
+![CPU double GHZ time vs qubits](docs/assets/frontier_cpu_double_ghz_time_vs_qubits.png)
 
-Takeaway:
+GPU double GHZ:
 
-- in this small development profile, `Qiskit Aer GPU` is working but not yet clearly faster than CPU;
-- the run is still dominated by fixed overhead, so these numbers should be treated as pipeline validation, not final hardware characterization.
+![GPU double GHZ time vs qubits](docs/assets/frontier_gpu_double_ghz_time_vs_qubits.png)
+
+![GPU double GHZ RAM vs qubits](docs/assets/frontier_gpu_double_ghz_ram_vs_qubits.png)
+
+![GPU double GHZ VRAM vs qubits](docs/assets/frontier_gpu_double_ghz_vram_vs_qubits.png)
+
+GPU single GHZ:
+
+![GPU single GHZ time vs qubits](docs/assets/frontier_gpu_single_ghz_time_vs_qubits.png)
+
+For the full write-up, methodology notes, and the structured public-safe summaries, see:
+
+- [docs/reports/current-machine-frontier.md](docs/reports/current-machine-frontier.md)
+- [docs/data/current-machine-frontier.json](docs/data/current-machine-frontier.json)
+- [docs/data/current-machine-hardware.json](docs/data/current-machine-hardware.json)
 
 ## Why WSL2 Instead Of Native Windows GPU
 
@@ -93,7 +106,7 @@ In the measured setup:
 
 - native Windows CPU runs worked well for `Qiskit Aer`, `Qulacs`, and `PennyLane`;
 - native Windows GPU runs failed across the tested backends;
-- `WSL2` with Ubuntu and `qiskit==1.4.5` plus `qiskit-aer-gpu` successfully executed GPU simulations on the `RTX 3050`.
+- `WSL2` with Ubuntu and `qiskit==1.4.5` plus `qiskit-aer-gpu` successfully executed GPU simulations on the `RTX A2000 12GB`.
 
 Practical conclusion:
 
@@ -126,29 +139,82 @@ python -m pip install qiskit==1.4.5 qiskit-aer-gpu
 python -m quantum_bench env-report --output artifacts/env-report-wsl-gpu.json
 python -m quantum_bench capability-probe --output artifacts/capabilities-wsl-gpu.json
 python -m quantum_bench run --profile profiles/dev-wsl-gpu.json --capabilities artifacts/capabilities-wsl-gpu.json
+python -m quantum_bench report --input-dir results/dev-wsl-gpu/<run-dir>
 python -m quantum_bench plot --input-dir results/dev-wsl-gpu/<run-dir> --output-dir plots/dev-wsl-gpu-<run-dir>
 ```
 
-### Current measured runs in this repository
+### WSL2 frontier run
 
-- Windows CPU-focused run:
-  [results/dev/dev-windows_wsl_dev-2026-04-22T020839+0000](results/dev/dev-windows_wsl_dev-2026-04-22T020839+0000/manifest.json)
-- WSL2 GPU-focused run:
-  [results/dev-wsl-gpu/dev-wsl-gpu-wsl2_ubuntu_gpu_dev-2026-04-22T025554+0000](results/dev-wsl-gpu/dev-wsl-gpu-wsl2_ubuntu_gpu_dev-2026-04-22T025554+0000/manifest.json)
+Use this when the goal is to push the current machine close to its practical statevector frontier on the validated NVIDIA path.
 
-## Plots
+```bash
+python3 -m venv .venv-wsl
+source .venv-wsl/bin/activate
+python -m pip install -U pip setuptools wheel
+python -m pip install psutil matplotlib pynvml qiskit-aer-gpu
+python -m quantum_bench env-report --output artifacts/env-report-wsl-frontier.json
+python -m quantum_bench capability-probe --output artifacts/capabilities-wsl-frontier.json
+python -m quantum_bench run --profile profiles/frontier-wsl-gpu.json --capabilities artifacts/capabilities-wsl-frontier.json
+python -m quantum_bench report --input-dir results/frontier-wsl-gpu/<run-dir>
+python -m quantum_bench plot --input-dir results/frontier-wsl-gpu/<run-dir> --output-dir plots/frontier-wsl-gpu-<run-dir>
+```
 
-### WSL2 GPU: CPU vs GPU speedup
+### WSL2 clean-slice frontier run
 
-![WSL2 GPU speedup plot](docs/assets/gpu_cpu_speedup_wsl_qiskit.png)
+Use this when you want the most reliable frontier data on the current machine. It runs each `(device, precision, family)` slice independently, reuses a cached WSL environment report, and writes a campaign-level summary in addition to the per-run artifacts.
 
-### WSL2 GPU: time vs qubits
+```powershell
+python -m quantum_bench env-report --output artifacts/env-report-wsl-frontier.json
+python -m quantum_bench capability-probe --output artifacts/capabilities-wsl-frontier.json
+.\scripts\run_wsl_frontier_precision.ps1 -ResultsRoot results/frontier-wsl-precision-campaign -PlotsRoot plots/frontier-wsl-precision-campaign -Resume
+```
 
-![WSL2 time vs qubits plot](docs/assets/time_vs_qubits_wsl_qiskit.png)
+For a single clean confirmation slice, use `-SelectedSlice`, for example:
 
-### Windows dev: time vs qubits
+```powershell
+.\scripts\run_wsl_frontier_precision.ps1 -SelectedSlice gpu-single-ghz -ResultsRoot results/frontier-wsl-precision-gpu-single-ghz-clean -PlotsRoot plots/frontier-wsl-precision-gpu-single-ghz-clean -Resume
+```
 
-![Windows dev time vs qubits plot](docs/assets/time_vs_qubits_windows_dev.png)
+If the first `qiskit-aer-gpu` install resolves to an incompatible `qiskit` combination in your WSL environment, fall back to:
+
+```bash
+python -m pip install qiskit==1.4.5 qiskit-aer-gpu
+```
+
+Optional secondary extension for `Qulacs` after the main `Qiskit Aer` frontier run:
+
+```bash
+python -m pip install qulacs-gpu
+python -m quantum_bench run --profile profiles/frontier-wsl-qulacs.json --capabilities artifacts/capabilities-wsl-frontier.json
+python -m quantum_bench report --input-dir results/frontier-wsl-qulacs/<run-dir>
+python -m quantum_bench plot --input-dir results/frontier-wsl-qulacs/<run-dir> --output-dir plots/frontier-wsl-qulacs-<run-dir>
+```
+
+### Committed benchmark artifacts
+
+- [Current machine frontier report](docs/reports/current-machine-frontier.md)
+- [Current machine frontier JSON](docs/data/current-machine-frontier.json)
+- [Current machine hardware JSON](docs/data/current-machine-hardware.json)
+- [Public repository guidelines](docs/reports/public-repo-guidelines.md)
+- Curated benchmark figures under [`docs/assets/`](docs/assets)
+
+### What should stay public vs local
+
+Safe to commit:
+
+- source code, profiles, scripts, and curated docs under `docs/`
+- public-safe JSON summaries under `docs/data/`
+- curated plots under `docs/assets/`
+
+Keep local only:
+
+- raw timestamped runs under `results/`
+- raw generated plots under `plots/`
+- local machine snapshots under `artifacts/`
+- local environments and temporary directories such as `.venv/`, `.venv-wsl/`, and `.campaign-temp/`
+- any file that exposes usernames, full local paths, temporary directories, hostnames, or raw environment-variable dumps
+
+The raw timestamped machine outputs that generated those summaries remain local under `results/`, `plots/`, and `artifacts/`. They are intentionally kept out of Git so the repository stays readable and commit-safe.
 
 ## Current MVP scope
 
@@ -164,7 +230,9 @@ python -m quantum_bench plot --input-dir results/dev-wsl-gpu/<run-dir> --output-
   - `trotter`
 - Commands:
   - `run`
+  - `run-wsl`
   - `plot`
+  - `report`
   - `env-report`
   - `capability-probe`
 
@@ -185,19 +253,30 @@ quantum_bench/
   config.py          profile expansion
   env_report.py      machine metadata
   plotting.py        plot generation
+  reporting.py       JSON/Markdown analysis summaries
   recipes.py         canonical circuit recipes
   reference.py       small exact simulator for correctness checks
   runner.py          isolated case execution and CSV/JSON writing
+
+docs/
+  assets/            committed plots used in the public report
+  data/              committed machine-summary JSON
+  reports/           GitHub-safe benchmark reports
 
 profiles/
   dev.json
   full.json
   dev-wsl-gpu.json
+  frontier-wsl-gpu.json
+  frontier-wsl-qulacs.json
+
+scripts/
+  run_wsl_frontier_precision.ps1
 ```
 
 ## Profiles
 
-The repository ships with three profiles:
+The repository ships with five profiles:
 
 - `profiles/dev.json`
   Short development profile for Windows CPU and partial GPU-path validation.
@@ -205,6 +284,12 @@ The repository ships with three profiles:
   Larger campaign driven by `capability-probe`, intended for the stronger target workstation.
 - `profiles/dev-wsl-gpu.json`
   WSL2/Linux-oriented development profile focused on real NVIDIA GPU runs with `Qiskit Aer`.
+- `profiles/frontier-wsl-gpu.json`
+  WSL2/Linux frontier profile focused on the heaviest validated `Qiskit Aer` CPU/GPU statevector cases on the current class of machine.
+- `profiles/frontier-wsl-qulacs.json`
+  Shorter WSL2/Linux extension profile for `Qulacs` CPU/GPU after the main frontier run.
+
+The frontier profiles also enable `frontier_stop_on_failure`, so once a qubit level fails for a given `(library, backend, device, precision, family)` slice, the remaining equal-or-higher cases in that slice are pruned instead of repeatedly hammering the same unstable boundary.
 
 ## Installation
 
@@ -242,6 +327,7 @@ Notes:
 - `Qiskit Aer GPU` worked in WSL2 after pinning `qiskit==1.4.5`.
 - Native Windows GPU execution did not work for the tested setup.
 - `qulacs-gpu` was not installed in WSL2 during the current runs because it requires a local build toolchain.
+- For the frontier workflow, try `pip install qiskit-aer-gpu` first and keep the pinned `qiskit==1.4.5` fallback if the resolved combination does not execute GPU cases correctly.
 
 ## Commands
 
@@ -281,7 +367,38 @@ Larger workstation-oriented run:
 python -m quantum_bench run --profile profiles/full.json --capabilities artifacts/capabilities.json
 ```
 
-### 4. Generate plots
+Frontier WSL2 GPU run:
+
+```bash
+python -m quantum_bench run --profile profiles/frontier-wsl-gpu.json --capabilities artifacts/capabilities-wsl-frontier.json
+```
+
+Recommended frontier run from Windows host with WSL execution isolation:
+
+```powershell
+python -m quantum_bench run-wsl --profile profiles/frontier-wsl-gpu.json --capabilities artifacts/capabilities-wsl-frontier.json --repo-root . --wsl-python .venv-wsl/bin/python
+```
+
+This mode launches one benchmark case per `wsl` invocation, which is much more resilient near the hardware limit because a single WSL-side crash is recorded as a failed case instead of taking down the entire campaign.
+
+To regenerate the committed public plots from the curated JSON files:
+
+```powershell
+python scripts/generate_public_report_assets.py
+```
+
+### 4. Generate analysis report
+
+```bash
+python -m quantum_bench report --input-dir results/frontier-wsl-gpu/...
+```
+
+Typical outputs:
+
+- `analysis-summary.json`
+- `analysis-report.md`
+
+### 5. Generate plots
 
 ```bash
 python -m quantum_bench plot --input-dir results/dev/... --output-dir plots/dev
@@ -305,7 +422,8 @@ Each run creates a timestamped directory containing:
 - `manifest.json`
 - `results.csv`
 - `results.json`
-- optional `analysis-summary.json`
+- `analysis-summary.json` after running `report`
+- `analysis-report.md` after running `report`
 
 Important CSV columns:
 
@@ -322,65 +440,15 @@ Important CSV columns:
 
 ## Current results on this machine
 
-These are preliminary numbers from the current development machine, not the final workstation target.
+The canonical committed summary is [docs/reports/current-machine-frontier.md](docs/reports/current-machine-frontier.md). It replaces the earlier ad hoc README snapshots with a clean-start frontier report, a structured JSON summary, and curated plots that are safe to keep in Git.
 
-### Windows dev run
-
-Source:
-
-- [analysis-summary.json](results/dev/dev-windows_wsl_dev-2026-04-22T020839+0000/analysis-summary.json)
-
-Headline results:
-
-- Non-warmup success rate: `58.06%`
-- CPU succeeded on all tested `Qiskit Aer`, `Qulacs`, and `PennyLane` cases
-- GPU failed on all tested Windows-native cases
-
-CPU median wall times from the current small profile:
-
-- `Qulacs`: about `0.103 s`
-- `Qiskit Aer`: about `0.77-0.82 s`
-- `PennyLane Lightning`: about `2.35-2.46 s`
-
-Observed Windows-native GPU failures:
-
-- `Qiskit Aer`: `Simulation device "GPU" is not supported on this system`
-- `PennyLane`: `lightning.gpu` device not available
-- `Qulacs`: GPU backend not available
-
-Interpretation:
-
-- For this machine, Windows native is useful for CPU comparisons and pipeline validation.
-- It is not the right path for the NVIDIA performance study.
-
-### WSL2 GPU run
-
-Source:
-
-- [analysis-summary.json](results/dev-wsl-gpu/dev-wsl-gpu-wsl2_ubuntu_gpu_dev-2026-04-22T025554+0000/analysis-summary.json)
-
-Headline results:
-
-- Non-warmup success rate: `84.21%`
-- `Qiskit Aer` succeeded on both CPU and GPU
-- `Qulacs` did not run because it was not installed in the WSL environment used for the measured run
-
-`Qiskit Aer` CPU vs GPU on this machine, `8-12` qubits:
-
-- observed speedups ranged from about `0.857x` to `1.036x`
-- GPU mostly tied with CPU or came out slightly slower in this short profile
-
-Interpretation:
-
-- The NVIDIA path is working in `WSL2` with `Qiskit Aer GPU`.
-- For the current qubit range and this runner shape, the GPU does not yet show a clear advantage.
-- The likely reason is that the profile is still too small and the fixed overhead dominates.
+Local raw artifacts still exist for the full investigation, but they remain intentionally gitignored because they are timestamped, bulky, and specific to this workstation.
 
 ## Known caveats
 
 - The GPU study is not complete yet. It currently has strong evidence for `Qiskit Aer GPU` in WSL2, but not yet for `Qulacs GPU` or `PennyLane lightning.gpu`.
 - Some fidelity values are suspicious, especially around `QFT`. That likely indicates a harness-side issue such as qubit ordering or backend mapping, not necessarily a simulator failure.
-- The current development profiles are intentionally small and include substantial startup overhead. They validate the pipeline, but they are not yet the final hardware characterization methodology.
+- The older development profiles are intentionally small and still useful for smoke testing, but the canonical frontier characterization now comes from the clean-start slice campaign documented under `docs/`.
 
 ## Limitations
 
@@ -389,7 +457,7 @@ Interpretation:
 - `qulacs-gpu` is not part of the measured Linux GPU results yet, because the current environment did not include the required build toolchain.
 - `PennyLane lightning.gpu` is not part of the measured success path yet on this machine.
 - Some correctness metrics, especially around `QFT`, likely still contain backend-ordering or reference-comparison issues.
-- The current measured profiles stop at small qubit counts and are meant for validation and preliminary comparison, not final publication-grade claims.
+- The repository now contains a much stronger machine-specific frontier characterization, but it is still a local benchmark campaign rather than a cross-lab publication package.
 
 ## Recommended next steps
 
@@ -416,4 +484,4 @@ Interpretation:
 
 - The runner imports heavy quantum frameworks lazily, per case.
 - Failures are recorded as result rows instead of aborting the whole campaign.
-- Generated directories such as `results/`, `plots/`, and `artifacts/` are intentionally ignored by git in this repository.
+- Raw generated directories such as `results/`, `plots/`, and `artifacts/` are intentionally ignored by git. The committed benchmark record now lives under `docs/`.

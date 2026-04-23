@@ -124,3 +124,12 @@ def env_int(name: str) -> int | None:
         return int(value)
     except ValueError:
         return None
+
+
+def windows_to_wsl_path(path: str | Path) -> str:
+    value = str(Path(path))
+    if re.match(r"^[A-Za-z]:", value):
+        drive = value[0].lower()
+        tail = value[2:].replace("\\", "/")
+        return f"/mnt/{drive}{tail}"
+    return value.replace("\\", "/")

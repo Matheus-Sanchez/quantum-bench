@@ -1,0 +1,46 @@
+{
+  "profile_name": "frontier-wsl-qulacs",
+  "execution_env": "wsl2_ubuntu_qulacs_frontier",
+  "preliminary": false,
+  "frontier_stop_on_failure": true,
+  "results_dir": "results/frontier-wsl-qulacs",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 1,
+    "repeats": 3,
+    "thread_modes": ["all"],
+    "timeouts": {
+      "case_s": 900
+    },
+    "memory_limits": {
+      "ram_fraction": 0.75,
+      "vram_fraction": 0.80,
+      "overhead_factor": 1.5
+    }
+  },
+  "benchmarks": [
+    {
+      "library": "qulacs",
+      "backend": "qulacs_statevector",
+      "devices": ["CPU", "GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 28],
+        "random": [20, 22, 24, 26, 28],
+        "ansatz": [20, 22, 24, 26, 28]
+      },
+      "depths": {
+        "random": 8,
+        "ansatz": 6
+      },
+      "memory_limits": {
+        "ram_source": "total"
+      },
+      "seeds": {
+        "ghz": [101],
+        "default": [101, 202]
+      }
+    }
+  ]
+}

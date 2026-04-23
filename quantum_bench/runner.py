@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import Callable
 from typing import Any
 
 from quantum_bench.adapters import run_backend_case
@@ -80,6 +81,20 @@ def _bytes_to_mb(value: int | None) -> float | None:
     return round(value / (1024 * 1024), 3)
 
 
+def _sanitize_text(value: str) -> str:
+    return value.replace("\x00", "").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _csv_safe_row(row: dict[str, Any]) -> dict[str, Any]:
+    safe: dict[str, Any] = {}
+    for key, value in row.items():
+        if isinstance(value, str):
+            safe[key] = _sanitize_text(value)
+        else:
+            safe[key] = value
+    return safe
+
+
 def _estimate_statevector_bytes(case: BenchmarkCase) -> int:
     bytes_per_amplitude = 8 if case.precision == "single" else 16
     return int((2 ** case.qubits) * bytes_per_amplitude * case.overhead_factor)
@@ -92,6 +107,96 @@ def _resource_limit_error(case: BenchmarkCase) -> str | None:
     if case.device == "CPU" and case.ram_limit_bytes and estimate > case.ram_limit_bytes:
         return f"estimated_statevector_bytes_exceeds_ram_limit:{estimate}>{case.ram_limit_bytes}"
     return None
+
+
+def _case_identity(case: BenchmarkCase) -> dict[str, Any]:
+    return {
+        "timestamp_utc": utc_now_iso(),
+        "profile_name": case.profile_name,
+        "manifest_id": case.manifest_id,
+        "execution_env": case.execution_env,
+        "preliminary": case.preliminary,
+        "host": platform.node(),
+        "platform": platform.platform(),
+        "library": case.library,
+        "backend": case.backend,
+        "backend_name": None,
+        "device": case.device,
+        "precision": case.precision,
+        "family": case.family,
+        "qubits": case.qubits,
+        "depth": case.depth,
+        "seed": case.seed,
+        "repeat_index": case.repeat_index,
+        "warmup": case.warmup,
+        "thread_mode": case.thread_mode,
+        "timeout_s": case.timeout_s,
+        "wall_s": None,
+        "cpu_s": None,
+        "peak_rss_mb": None,
+        "gpu_peak_mem_mb": None,
+        "gpu_peak_util_pct": None,
+        "estimated_statevector_mb": _bytes_to_mb(_estimate_statevector_bytes(case)),
+        "state_fidelity_ref": None,
+        "trace_distance_ref": None,
+        "success": False,
+        "error": None,
+        "error_type": None,
+        "python_executable": sys.executable,
+        "python_version": platform.python_version(),
+        "driver_version": None,
+        "cuda_version": None,
+        "qiskit_version": None,
+        "qiskit_aer_version": None,
+        "qulacs_version": None,
+        "pennylane_version": None,
+        "pennylane_lightning_version": None,
+        "op_total": None,
+        "op_h": None,
+        "op_rx": None,
+        "op_ry": None,
+        "op_rz": None,
+        "op_cx": None,
+        "op_cp": None,
+        "op_swap": None,
+        "logical_depth": None,
+    }
+
+
+def build_error_row(
+    case: BenchmarkCase,
+    *,
+    error_type: str,
+    error: str,
+    wall_s: float | None = None,
+) -> dict[str, Any]:
+    row = _case_identity(case)
+    row["error_type"] = error_type
+    row["error"] = _sanitize_text(error)
+    row["wall_s"] = round(wall_s, 10) if wall_s is not None else None
+    return row
+
+
+def _frontier_group_key(case: BenchmarkCase) -> tuple[str, str, str, str, str]:
+    return (case.library, case.backend, case.device, case.precision, case.family)
+
+
+def _should_stop_frontier_after_failure(row: dict[str, Any]) -> bool:
+    if row.get("success"):
+        return False
+    error_type = str(row.get("error_type") or "")
+    return error_type not in {"frontier_pruned"}
+
+
+def _row_status_label(row: dict[str, Any]) -> str:
+    if row.get("success"):
+        return "ok"
+    error_type = str(row.get("error_type") or "")
+    if error_type == "frontier_pruned":
+        return "pruned"
+    if error_type == "estimated_limit":
+        return "skip"
+    return "fail"
 
 
 def _thread_env(case: BenchmarkCase) -> dict[str, str]:
@@ -197,57 +302,7 @@ def run_child_case(case: BenchmarkCase) -> dict[str, Any]:
 def invoke_case_subprocess(case: BenchmarkCase) -> dict[str, Any]:
     limit_error = _resource_limit_error(case)
     if limit_error:
-        return {
-            "timestamp_utc": utc_now_iso(),
-            "profile_name": case.profile_name,
-            "manifest_id": case.manifest_id,
-            "execution_env": case.execution_env,
-            "preliminary": case.preliminary,
-            "host": platform.node(),
-            "platform": platform.platform(),
-            "library": case.library,
-            "backend": case.backend,
-            "backend_name": None,
-            "device": case.device,
-            "precision": case.precision,
-            "family": case.family,
-            "qubits": case.qubits,
-            "depth": case.depth,
-            "seed": case.seed,
-            "repeat_index": case.repeat_index,
-            "warmup": case.warmup,
-            "thread_mode": case.thread_mode,
-            "timeout_s": case.timeout_s,
-            "wall_s": None,
-            "cpu_s": None,
-            "peak_rss_mb": None,
-            "gpu_peak_mem_mb": None,
-            "gpu_peak_util_pct": None,
-            "estimated_statevector_mb": _bytes_to_mb(_estimate_statevector_bytes(case)),
-            "state_fidelity_ref": None,
-            "trace_distance_ref": None,
-            "success": False,
-            "error": limit_error,
-            "error_type": "estimated_limit",
-            "python_executable": sys.executable,
-            "python_version": platform.python_version(),
-            "driver_version": None,
-            "cuda_version": None,
-            "qiskit_version": None,
-            "qiskit_aer_version": None,
-            "qulacs_version": None,
-            "pennylane_version": None,
-            "pennylane_lightning_version": None,
-            "op_total": None,
-            "op_h": None,
-            "op_rx": None,
-            "op_ry": None,
-            "op_rz": None,
-            "op_cx": None,
-            "op_cp": None,
-            "op_swap": None,
-            "logical_depth": None,
-        }
+        return build_error_row(case, error_type="estimated_limit", error=limit_error)
 
     with tempfile.TemporaryDirectory(prefix="quantum-bench-") as temp_dir_name:
         temp_dir = Path(temp_dir_name)
@@ -277,110 +332,20 @@ def invoke_case_subprocess(case: BenchmarkCase) -> dict[str, Any]:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            return {
-                "timestamp_utc": utc_now_iso(),
-                "profile_name": case.profile_name,
-                "manifest_id": case.manifest_id,
-                "execution_env": case.execution_env,
-                "preliminary": case.preliminary,
-                "host": platform.node(),
-                "platform": platform.platform(),
-                "library": case.library,
-                "backend": case.backend,
-                "backend_name": None,
-                "device": case.device,
-                "precision": case.precision,
-                "family": case.family,
-                "qubits": case.qubits,
-                "depth": case.depth,
-                "seed": case.seed,
-                "repeat_index": case.repeat_index,
-                "warmup": case.warmup,
-                "thread_mode": case.thread_mode,
-                "timeout_s": case.timeout_s,
-                "wall_s": round(time.perf_counter() - started, 10),
-                "cpu_s": None,
-                "peak_rss_mb": None,
-                "gpu_peak_mem_mb": None,
-                "gpu_peak_util_pct": None,
-                "estimated_statevector_mb": _bytes_to_mb(_estimate_statevector_bytes(case)),
-                "state_fidelity_ref": None,
-                "trace_distance_ref": None,
-                "success": False,
-                "error": f"timeout_after_{case.timeout_s}s:{exc}",
-                "error_type": "timeout",
-                "python_executable": sys.executable,
-                "python_version": platform.python_version(),
-                "driver_version": None,
-                "cuda_version": None,
-                "qiskit_version": None,
-                "qiskit_aer_version": None,
-                "qulacs_version": None,
-                "pennylane_version": None,
-                "pennylane_lightning_version": None,
-                "op_total": None,
-                "op_h": None,
-                "op_rx": None,
-                "op_ry": None,
-                "op_rz": None,
-                "op_cx": None,
-                "op_cp": None,
-                "op_swap": None,
-                "logical_depth": None,
-            }
+            return build_error_row(
+                case,
+                error_type="timeout",
+                error=f"timeout_after_{case.timeout_s}s:{exc}",
+                wall_s=time.perf_counter() - started,
+            )
 
         if completed.returncode != 0 and not output_path.exists():
-            return {
-                "timestamp_utc": utc_now_iso(),
-                "profile_name": case.profile_name,
-                "manifest_id": case.manifest_id,
-                "execution_env": case.execution_env,
-                "preliminary": case.preliminary,
-                "host": platform.node(),
-                "platform": platform.platform(),
-                "library": case.library,
-                "backend": case.backend,
-                "backend_name": None,
-                "device": case.device,
-                "precision": case.precision,
-                "family": case.family,
-                "qubits": case.qubits,
-                "depth": case.depth,
-                "seed": case.seed,
-                "repeat_index": case.repeat_index,
-                "warmup": case.warmup,
-                "thread_mode": case.thread_mode,
-                "timeout_s": case.timeout_s,
-                "wall_s": round(time.perf_counter() - started, 10),
-                "cpu_s": None,
-                "peak_rss_mb": None,
-                "gpu_peak_mem_mb": None,
-                "gpu_peak_util_pct": None,
-                "estimated_statevector_mb": _bytes_to_mb(_estimate_statevector_bytes(case)),
-                "state_fidelity_ref": None,
-                "trace_distance_ref": None,
-                "success": False,
-                "error": (completed.stderr or completed.stdout or "child_case_failed").strip(),
-                "error_type": f"subprocess_exit_{completed.returncode}",
-                "python_executable": sys.executable,
-                "python_version": platform.python_version(),
-                "driver_version": None,
-                "cuda_version": None,
-                "qiskit_version": None,
-                "qiskit_aer_version": None,
-                "qulacs_version": None,
-                "pennylane_version": None,
-                "pennylane_lightning_version": None,
-                "op_total": None,
-                "op_h": None,
-                "op_rx": None,
-                "op_ry": None,
-                "op_rz": None,
-                "op_cx": None,
-                "op_cp": None,
-                "op_swap": None,
-                "logical_depth": None,
-            }
+            return build_error_row(
+                case,
+                error_type=f"subprocess_exit_{completed.returncode}",
+                error=(completed.stderr or completed.stdout or "child_case_failed").strip(),
+                wall_s=time.perf_counter() - started,
+            )
 
         return load_json(output_path)
 
@@ -390,9 +355,12 @@ def run_profile(
     cases: list[BenchmarkCase],
     destination_dir: Path,
     capability_report: dict[str, Any] | None,
+    *,
+    case_invoker: Callable[[BenchmarkCase], dict[str, Any]] | None = None,
+    env_report_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ensure_directory(destination_dir)
-    env_report = build_env_report()
+    env_report = env_report_override or build_env_report()
     write_json(destination_dir / "env-report.json", env_report)
     if capability_report is not None:
         write_json(destination_dir / "capability-report.json", capability_report)
@@ -408,19 +376,43 @@ def run_profile(
     write_json(destination_dir / "manifest.json", manifest)
 
     rows = []
+    frontier_stop_on_failure = bool(profile.get("frontier_stop_on_failure", False))
+    frontier_blocked_qubits: dict[tuple[str, str, str, str, str], int] = {}
+    invoker = case_invoker or invoke_case_subprocess
     csv_path = destination_dir / "results.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=CSV_FIELDS,
+            extrasaction="ignore",
+            quoting=csv.QUOTE_MINIMAL,
+            escapechar="\\",
+        )
         writer.writeheader()
         for index, case in enumerate(cases, start=1):
-            row = invoke_case_subprocess(case)
+            blocked_qubits = frontier_blocked_qubits.get(_frontier_group_key(case))
+            if blocked_qubits is not None and case.qubits >= blocked_qubits:
+                row = build_error_row(
+                    case,
+                    error_type="frontier_pruned",
+                    error=f"skipped_after_failure_at_{blocked_qubits}q",
+                )
+            else:
+                row = invoker(case)
+                if frontier_stop_on_failure and _should_stop_frontier_after_failure(row):
+                    group_key = _frontier_group_key(case)
+                    previous = frontier_blocked_qubits.get(group_key)
+                    frontier_blocked_qubits[group_key] = (
+                        case.qubits if previous is None else min(previous, case.qubits)
+                    )
+            row = _csv_safe_row(row)
             rows.append(row)
             writer.writerow(row)
             print(
                 f"[{index}/{len(cases)}] {case.library} {case.family} {case.qubits}q "
                 f"{case.device} {case.precision} {case.thread_mode} "
                 f"{'warmup' if case.warmup else f'rep{case.repeat_index}'} -> "
-                f"{'ok' if row.get('success') else 'fail'}"
+                f"{_row_status_label(row)}"
             )
 
     json_path = destination_dir / "results.json"

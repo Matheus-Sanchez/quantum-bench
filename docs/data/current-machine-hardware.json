@@ -1,0 +1,40 @@
+{
+  "machine_name": "Current development workstation",
+  "hardware": {
+    "host_os": "Windows 11 Pro 10.0.26200",
+    "guest_os": "WSL2 Ubuntu 24.04 on Linux 6.6.87.2-microsoft-standard-WSL2",
+    "cpu": {
+      "model": "Intel Core i7-14700K",
+      "physical_cores": 20,
+      "logical_threads": 28,
+      "wsl_logical_threads": 28,
+      "l3_cache": "33 MiB"
+    },
+    "memory": {
+      "system_ram_gib": 27.4,
+      "safe_ram_budget_gib": 20.0
+    },
+    "gpu": {
+      "model": "NVIDIA RTX A2000 12GB",
+      "vram_gib": 12.0,
+      "safe_vram_budget_gib": 9.1,
+      "driver": "581.42",
+      "cuda": "13.0"
+    },
+    "capability_probe": {
+      "cpu_statevector_double_recommended_max_qubits": 29,
+      "cpu_statevector_single_recommended_max_qubits": 30,
+      "gpu_statevector_double_recommended_max_qubits": 28,
+      "gpu_statevector_single_recommended_max_qubits": 29
+    }
+  },
+  "software": {
+    "python": "3.12.3",
+    "qiskit": "1.4.5",
+    "qiskit_aer": "0.15.1",
+    "matplotlib": "3.10.8",
+    "psutil": "7.2.2",
+    "pynvml": "13.0.1"
+  },
+  "privacy_note": "This is the public-safe hardware summary. It intentionally omits hostname, usernames, local filesystem paths, temporary directories, and environment-variable dumps."
+}

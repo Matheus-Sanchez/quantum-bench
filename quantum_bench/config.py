@@ -72,6 +72,29 @@ def _timeout_seconds(defaults: dict[str, Any], benchmark: dict[str, Any]) -> int
     return int(merged.get("case_s", 300))
 
 
+def _memory_source_value(report: dict[str, Any] | None, *, kind: str, source: str) -> int | None:
+    report = report or {}
+    source_name = source.lower()
+    if kind == "ram":
+        memory = report.get("system_memory", {})
+        if source_name == "total":
+            value = memory.get("total_bytes")
+        else:
+            value = memory.get("available_bytes")
+            if value is None:
+                value = memory.get("total_bytes")
+        return int(value) if value else None
+
+    gpu = report.get("gpu", {})
+    if source_name == "total":
+        value = gpu.get("total_bytes")
+    else:
+        value = gpu.get("free_bytes")
+        if value is None:
+            value = gpu.get("total_bytes")
+    return int(value) if value else None
+
+
 def expand_cases(
     profile: dict[str, Any],
     capability_report: dict[str, Any] | None = None,
@@ -96,15 +119,13 @@ def expand_cases(
         ram_fraction = float(limits.get("ram_fraction", 0.75))
         vram_fraction = float(limits.get("vram_fraction", 0.80))
         overhead_factor = float(limits.get("overhead_factor", 1.5))
+        ram_source = str(limits.get("ram_source", "available"))
+        vram_source = str(limits.get("vram_source", "free"))
         seeds = benchmark.get("seeds", {})
 
-        ram_total = (capability_report or {}).get("system_memory", {}).get("available_bytes")
-        if ram_total is None:
-            ram_total = (capability_report or {}).get("system_memory", {}).get("total_bytes")
+        ram_total = _memory_source_value(capability_report, kind="ram", source=ram_source)
         ram_limit_bytes = int(ram_total * ram_fraction) if ram_total else None
-        gpu_total = (capability_report or {}).get("gpu", {}).get("free_bytes")
-        if gpu_total is None:
-            gpu_total = (capability_report or {}).get("gpu", {}).get("total_bytes")
+        gpu_total = _memory_source_value(capability_report, kind="gpu", source=vram_source)
         vram_limit_bytes = int(gpu_total * vram_fraction) if gpu_total else None
 
         for family in families:
@@ -152,6 +173,8 @@ def expand_cases(
                                                 "spec_index": spec_index,
                                                 "ram_fraction": ram_fraction,
                                                 "vram_fraction": vram_fraction,
+                                                "ram_source": ram_source,
+                                                "vram_source": vram_source,
                                             },
                                         )
                                     )
