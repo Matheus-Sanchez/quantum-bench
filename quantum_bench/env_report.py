@@ -54,6 +54,7 @@ def build_env_report() -> dict[str, Any]:
         "qulacs": package_version("qulacs"),
         "pennylane": package_version("pennylane"),
         "pennylane-lightning": package_version("pennylane-lightning"),
+        "cuquantum": package_version("cuquantum") or package_version("cuquantum-python"),
         "matplotlib": package_version("matplotlib"),
         "psutil": package_version("psutil"),
         "pynvml": package_version("pynvml"),

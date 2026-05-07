@@ -38,6 +38,15 @@ class BenchmarkCase:
     overhead_factor: float
     max_reference_qubits: int
     manifest_id: str
+    variant: str = "legacy"
+    sim_method: str = "statevector"
+    execution_mode: str = "isolated_frontier"
+    executor: str = "wsl_python"
+    backend_options: dict[str, Any] = field(default_factory=dict)
+    output_mode: str = "statevector"
+    output_qubits: list[int] | None = None
+    shots: int | None = None
+    noise_profile: str = "none"
     sample_interval_s: float = 0.05
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -48,7 +57,11 @@ class BenchmarkCase:
 @dataclass
 class AdapterResult:
     backend_name: str
-    statevector: list[complex] | None
+    statevector: list[complex] | None = None
+    probabilities: list[float] | None = None
+    counts: dict[str, int] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    timings: dict[str, float | None] = field(default_factory=dict)
     extra: dict[str, Any] = field(default_factory=dict)
 
 

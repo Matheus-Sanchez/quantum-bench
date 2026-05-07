@@ -6,7 +6,12 @@ __pycache__/
 artifacts/
 results/
 plots/
+logs/
 .campaign-temp/
+*.egg-info/
+*.zip
+.codex
+.codex/
 
 .pytest_cache/
 .mypy_cache/

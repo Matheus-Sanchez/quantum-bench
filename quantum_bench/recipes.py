@@ -77,8 +77,13 @@ def build_recipe(family: str, qubits: int, depth: int, seed: int) -> list[Operat
 
 def recipe_counts(ops: list[Operation]) -> dict[str, int]:
     counter = Counter(op[0] for op in ops)
+    one_qubit_gate_count = counter["h"] + counter["rx"] + counter["ry"] + counter["rz"]
+    two_qubit_gate_count = counter["cx"] + counter["cp"] + counter["swap"]
+    entangling_gate_count = counter["cx"] + counter["cp"]
+    op_total = len(ops)
+    two_qubit_gate_density = round(two_qubit_gate_count / op_total, 6) if op_total else 0.0
     return {
-        "op_total": len(ops),
+        "op_total": op_total,
         "op_h": counter["h"],
         "op_rx": counter["rx"],
         "op_ry": counter["ry"],
@@ -86,6 +91,10 @@ def recipe_counts(ops: list[Operation]) -> dict[str, int]:
         "op_cx": counter["cx"],
         "op_cp": counter["cp"],
         "op_swap": counter["swap"],
+        "one_qubit_gate_count": one_qubit_gate_count,
+        "two_qubit_gate_count": two_qubit_gate_count,
+        "entangling_gate_count": entangling_gate_count,
+        "two_qubit_gate_density": two_qubit_gate_density,
     }
 
 

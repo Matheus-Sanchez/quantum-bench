@@ -1,0 +1,78 @@
+{
+  "profile_name": "cuquantum-noisy-depth-sweep-wsl",
+  "execution_env": "wsl2_ubuntu_gpu_cuquantum_noisy_depth",
+  "preliminary": false,
+  "results_dir": "results/cuquantum-noisy-depth-sweep-wsl",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 2,
+    "repeats": 5,
+    "thread_modes": ["all"],
+    "execution_mode": "persistent_group",
+    "executor": "wsl_python",
+    "output_mode": "counts",
+    "output_qubits": [0, 1, 2, 3, 4, 5, 6, 7],
+    "shots": 4096,
+    "noise_profile": "synthetic_canonical_v1",
+    "timeouts": {"case_s": 600},
+    "memory_limits": {
+      "ram_fraction": 0.75,
+      "vram_fraction": 0.80,
+      "overhead_factor": 1.5
+    }
+  },
+  "benchmarks": [
+    {
+      "variant": "cpu_statevector",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector"},
+      "devices": ["CPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "ansatz", "trotter"],
+      "qubit_grid": {"ghz": [12, 16, 20, 24], "ansatz": [12, 16, 20, 24], "trotter": [12, 16, 20, 24]},
+      "depths": {"ghz": [2, 4, 8, 12, 16, 24], "ansatz": [2, 4, 8, 12, 16, 24], "trotter": [2, 4, 8, 12, 16, 24]},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_thrust",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector", "cuStateVec_enable": false},
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "ansatz", "trotter"],
+      "qubit_grid": {"ghz": [12, 16, 20, 24], "ansatz": [12, 16, 20, 24], "trotter": [12, 16, 20, 24]},
+      "depths": {"ghz": [2, 4, 8, 12, 16, 24], "ansatz": [2, 4, 8, 12, 16, 24], "trotter": [2, 4, 8, 12, 16, 24]},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_custatevec",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector", "cuStateVec_enable": true},
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "ansatz", "trotter"],
+      "qubit_grid": {"ghz": [12, 16, 20, 24], "ansatz": [12, 16, 20, 24], "trotter": [12, 16, 20, 24]},
+      "depths": {"ghz": [2, 4, 8, 12, 16, 24], "ansatz": [2, 4, 8, 12, 16, 24], "trotter": [2, 4, 8, 12, 16, 24]},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_tensornetwork",
+      "library": "qiskit_aer",
+      "backend": "aer_tensor_network",
+      "sim_method": "tensor_network",
+      "backend_options": {"method": "tensor_network", "use_cuTensorNet_autotuning": true},
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "ansatz", "trotter"],
+      "qubit_grid": {"ghz": [12, 16, 20, 24], "ansatz": [12, 16, 20, 24], "trotter": [12, 16, 20, 24]},
+      "depths": {"ghz": [2, 4, 8, 12, 16, 24], "ansatz": [2, 4, 8, 12, 16, 24], "trotter": [2, 4, 8, 12, 16, 24]},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    }
+  ]
+}

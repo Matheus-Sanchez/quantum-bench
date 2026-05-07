@@ -1,0 +1,8 @@
+campaign_id,profile_name,error_type,count,pct_of_failed_non_warmup
+exact-frontier,cuquantum-exact-frontier-wsl,frontier_pruned,1681,99.94
+exact-frontier,cuquantum-exact-frontier-wsl,wsl_exit_1,1,0.06
+observable-frontier,cuquantum-observable-frontier-wsl,frontier_pruned,800,100.0
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,group_aborted_after_warmup_failure,2310,100.0
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,group_aborted_after_warmup_failure,1460,94.93
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,group_aborted_after_repeat_failure,59,3.84
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,QiskitError,19,1.24

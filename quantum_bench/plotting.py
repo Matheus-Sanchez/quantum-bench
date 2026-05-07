@@ -8,6 +8,15 @@ from typing import Any
 from quantum_bench.utils import ensure_directory, iqr, median, safe_float
 
 
+def _variant(row: dict[str, Any]) -> str:
+    variant = str(row.get("variant") or "").strip()
+    if variant:
+        return variant
+    library = str(row.get("library") or "unknown")
+    device = str(row.get("device") or "unknown").lower()
+    return f"{library}_{device}"
+
+
 def _load_rows(input_dir: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for csv_path in input_dir.rglob("results.csv"):
@@ -21,34 +30,34 @@ def _success_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [row for row in rows if row.get("success") in ("True", "true", True) and row.get("warmup") not in ("True", "true", True)]
 
 
-def _group_metric(rows: list[dict[str, Any]], metric: str) -> dict[tuple[str, str, str, str], list[tuple[int, float]]]:
-    grouped: dict[tuple[str, str, str, str], list[tuple[int, float]]] = defaultdict(list)
-    buckets: dict[tuple[str, str, str, str, int], list[float]] = defaultdict(list)
+def _group_metric(rows: list[dict[str, Any]], metric: str) -> dict[tuple[str, str, str, str, str], list[tuple[int, float]]]:
+    grouped: dict[tuple[str, str, str, str, str], list[tuple[int, float]]] = defaultdict(list)
+    buckets: dict[tuple[str, str, str, str, str, int], list[float]] = defaultdict(list)
     for row in rows:
         value = safe_float(row.get(metric))
-        qubits = row.get("qubits")
-        if value is None or qubits is None:
+        qubits_raw = row.get("qubits")
+        if value is None or qubits_raw is None:
             continue
-        key = (row["library"], row["family"], row["device"], row["precision"], int(qubits))
+        key = (_variant(row), row["library"], row["family"], row["device"], row["precision"], int(qubits_raw))
         buckets[key].append(value)
 
-    for (library, family, device, precision, qubits), values in sorted(buckets.items()):
-        group_key = (library, family, device, precision)
+    for (variant, library, family, device, precision, qubits), values in sorted(buckets.items()):
+        group_key = (variant, library, family, device, precision)
         med = median(values)
         if med is not None:
             grouped[group_key].append((qubits, med))
     return grouped
 
 
-def _plot_lines(grouped: dict[tuple[str, str, str, str], list[tuple[int, float]]], title: str, ylabel: str, output_path: Path) -> None:
+def _plot_lines(grouped: dict[tuple[str, str, str, str, str], list[tuple[int, float]]], title: str, ylabel: str, output_path: Path) -> None:
     import matplotlib.pyplot as plt  # type: ignore
 
     plt.figure(figsize=(12, 7))
-    for (library, family, device, precision), points in grouped.items():
+    for (variant, library, family, device, precision), points in grouped.items():
         points = sorted(points, key=lambda item: item[0])
         xs = [item[0] for item in points]
         ys = [item[1] for item in points]
-        label = f"{library}:{family}:{device}:{precision}"
+        label = f"{variant}:{library}:{family}:{device}:{precision}"
         plt.plot(xs, ys, marker="o", label=label)
     plt.title(title)
     plt.xlabel("Qubits")
@@ -65,37 +74,38 @@ def _plot_speedup(rows: list[dict[str, Any]], output_path: Path) -> None:
     import matplotlib.pyplot as plt  # type: ignore
 
     cpu_buckets: dict[tuple[str, str, str, int], list[float]] = defaultdict(list)
-    gpu_buckets: dict[tuple[str, str, str, int], list[float]] = defaultdict(list)
+    gpu_buckets: dict[tuple[str, str, str, str, int], list[float]] = defaultdict(list)
     for row in rows:
         value = safe_float(row.get("wall_s"))
         if value is None:
             continue
-        key = (row["library"], row["family"], row["precision"], int(row["qubits"]))
         if row["device"] == "CPU":
-            cpu_buckets[key].append(value)
+            cpu_key = (row["library"], row["family"], row["precision"], int(row["qubits"]))
+            cpu_buckets[cpu_key].append(value)
         elif row["device"] == "GPU":
-            gpu_buckets[key].append(value)
+            gpu_key = (_variant(row), row["library"], row["family"], row["precision"], int(row["qubits"]))
+            gpu_buckets[gpu_key].append(value)
 
-    series: dict[tuple[str, str, str], list[tuple[int, float]]] = defaultdict(list)
-    for key, cpu_values in cpu_buckets.items():
-        gpu_values = gpu_buckets.get(key)
-        if not gpu_values:
+    series: dict[tuple[str, str, str, str], list[tuple[int, float]]] = defaultdict(list)
+    for (variant, library, family, precision, qubits), gpu_values in gpu_buckets.items():
+        cpu_key = (library, family, precision, qubits)
+        cpu_values = cpu_buckets.get(cpu_key)
+        if not cpu_values:
             continue
         cpu_med = median(cpu_values)
         gpu_med = median(gpu_values)
         if cpu_med is None or gpu_med in (None, 0):
             continue
-        library, family, precision, qubits = key
-        series[(library, family, precision)].append((qubits, cpu_med / gpu_med))
+        series[(variant, library, family, precision)].append((qubits, cpu_med / gpu_med))
 
     plt.figure(figsize=(12, 7))
-    for (library, family, precision), points in series.items():
+    for (variant, library, family, precision), points in series.items():
         points = sorted(points, key=lambda item: item[0])
         plt.plot(
             [item[0] for item in points],
             [item[1] for item in points],
             marker="o",
-            label=f"{library}:{family}:{precision}",
+            label=f"{variant}:{library}:{family}:{precision}",
         )
     plt.axhline(1.0, linestyle="--", color="gray", linewidth=1)
     plt.title("GPU / CPU Speedup (median wall time)")
@@ -111,20 +121,21 @@ def _plot_speedup(rows: list[dict[str, Any]], output_path: Path) -> None:
 
 def _write_summary(rows: list[dict[str, Any]], output_path: Path) -> None:
     summary: dict[str, Any] = {"groups": []}
-    buckets: dict[tuple[str, str, str, str], list[float]] = defaultdict(list)
+    buckets: dict[tuple[str, str, str, str, str], list[float]] = defaultdict(list)
     for row in rows:
         value = safe_float(row.get("wall_s"))
         if value is None:
             continue
-        key = (row["library"], row["family"], row["device"], row["precision"])
+        key = (_variant(row), row["library"], row["family"], row["device"], row["precision"])
         buckets[key].append(value)
     for key, values in sorted(buckets.items()):
         summary["groups"].append(
             {
-                "library": key[0],
-                "family": key[1],
-                "device": key[2],
-                "precision": key[3],
+                "variant": key[0],
+                "library": key[1],
+                "family": key[2],
+                "device": key[3],
+                "precision": key[4],
                 "median_wall_s": median(values),
                 "iqr_wall_s": iqr(values),
                 "samples": len(values),

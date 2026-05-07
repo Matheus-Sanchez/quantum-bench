@@ -95,13 +95,51 @@ def _memory_source_value(report: dict[str, Any] | None, *, kind: str, source: st
     return int(value) if value else None
 
 
+def _backend_options(defaults: dict[str, Any], benchmark: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(defaults.get("backend_options", {}))
+    merged.update(benchmark.get("backend_options", {}))
+    return merged
+
+
+def _depth_values(benchmark: dict[str, Any], family: str) -> list[int]:
+    raw_depths = benchmark.get("depths", {})
+    if isinstance(raw_depths, dict):
+        value = raw_depths.get(family, 1)
+    else:
+        value = raw_depths
+    return [int(depth) for depth in _as_list(value, [1])]
+
+
+def _default_variant(
+    *,
+    library: str,
+    device: str,
+    sim_method: str,
+    backend_options: dict[str, Any],
+) -> str:
+    normalized_device = str(device).upper()
+    if library == "qiskit_aer" and backend_options.get("cusvaer_enable") is True:
+        return "appliance_cusvaer"
+    if library == "qiskit_aer" and sim_method == "tensor_network":
+        if normalized_device == "GPU":
+            return "gpu_tensornetwork"
+        return "cpu_tensornetwork"
+    if library == "qiskit_aer" and sim_method == "statevector":
+        if normalized_device == "CPU":
+            return "cpu_statevector"
+        if backend_options.get("cuStateVec_enable") is True:
+            return "gpu_custatevec"
+        return "gpu_thrust"
+    return f"{library}_{normalized_device.lower()}_{sim_method}"
+
+
 def expand_cases(
     profile: dict[str, Any],
     capability_report: dict[str, Any] | None = None,
     limit: int | None = None,
 ) -> list[BenchmarkCase]:
     defaults = profile.get("defaults", {})
-    max_reference_qubits = int(profile.get("max_reference_qubits", 12))
+    max_reference_qubits = int(profile.get("max_reference_qubits", defaults.get("max_reference_qubits", 12)))
     cases: list[BenchmarkCase] = []
     generated = 0
 
@@ -116,12 +154,22 @@ def expand_cases(
         thread_modes = _as_list(benchmark.get("thread_modes", defaults.get("thread_modes", ["single", "all"])))
         timeout_s = _timeout_seconds(defaults, benchmark)
         limits = _memory_limits(defaults, benchmark)
+        backend_options = _backend_options(defaults, benchmark)
         ram_fraction = float(limits.get("ram_fraction", 0.75))
         vram_fraction = float(limits.get("vram_fraction", 0.80))
         overhead_factor = float(limits.get("overhead_factor", 1.5))
         ram_source = str(limits.get("ram_source", "available"))
         vram_source = str(limits.get("vram_source", "free"))
         seeds = benchmark.get("seeds", {})
+        sim_method = str(benchmark.get("sim_method", backend_options.get("method", defaults.get("sim_method", "statevector"))))
+        execution_mode = str(benchmark.get("execution_mode", defaults.get("execution_mode", "isolated_frontier")))
+        executor = str(benchmark.get("executor", defaults.get("executor", profile.get("executor", "wsl_python"))))
+        output_mode = str(benchmark.get("output_mode", defaults.get("output_mode", "statevector")))
+        raw_output_qubits = benchmark.get("output_qubits", defaults.get("output_qubits", list(range(8))))
+        output_qubits = [int(value) for value in _as_list(raw_output_qubits)] if raw_output_qubits is not None else None
+        shots_value = benchmark.get("shots", defaults.get("shots", 4096))
+        shots = int(shots_value) if shots_value is not None else None
+        noise_profile = str(benchmark.get("noise_profile", defaults.get("noise_profile", "none")))
 
         ram_total = _memory_source_value(capability_report, kind="ram", source=ram_source)
         ram_limit_bytes = int(ram_total * ram_fraction) if ram_total else None
@@ -130,55 +178,76 @@ def expand_cases(
 
         for family in families:
             qubit_values = resolve_qubit_grid(benchmark["qubit_grid"], family, capability_report)
-            depth = int(benchmark.get("depths", {}).get(family, 1))
+            depth_values = _depth_values(benchmark, family)
             family_seeds = _as_list(seeds.get(family, seeds.get("default", [0])))
 
             for device in devices:
                 active_thread_modes = ["all"] if str(device).upper() == "GPU" else thread_modes
                 for precision in precisions:
+                    variant = str(
+                        benchmark.get(
+                            "variant",
+                            _default_variant(
+                                library=str(library),
+                                device=str(device),
+                                sim_method=sim_method,
+                                backend_options=backend_options,
+                            ),
+                        )
+                    )
                     for qubits in qubit_values:
-                        for seed in family_seeds:
-                            for thread_mode in active_thread_modes:
-                                total_loops = warmups + repeats
-                                for offset in range(total_loops):
-                                    warmup = offset < warmups
-                                    repeat_index = offset if warmup else offset - warmups
-                                    manifest_id = (
-                                        f"{library}-{spec_index}-{family}-{device}-{precision}-{qubits}q-"
-                                        f"seed{seed}-{thread_mode}-{'warmup' if warmup else f'rep{repeat_index}'}"
-                                    )
-                                    cases.append(
-                                        BenchmarkCase(
-                                            profile_name=str(profile.get("profile_name", "default")),
-                                            execution_env=str(profile["execution_env"]),
-                                            preliminary=bool(profile.get("preliminary", False)),
-                                            library=str(library),
-                                            backend=str(backend),
-                                            device=str(device).upper(),
-                                            precision=str(precision).lower(),
-                                            family=str(family),
-                                            qubits=int(qubits),
-                                            depth=depth,
-                                            seed=int(seed),
-                                            repeat_index=repeat_index,
-                                            warmup=warmup,
-                                            thread_mode=str(thread_mode),
-                                            timeout_s=timeout_s,
-                                            ram_limit_bytes=ram_limit_bytes,
-                                            vram_limit_bytes=vram_limit_bytes,
-                                            overhead_factor=overhead_factor,
-                                            max_reference_qubits=max_reference_qubits,
-                                            manifest_id=manifest_id,
-                                            metadata={
-                                                "spec_index": spec_index,
-                                                "ram_fraction": ram_fraction,
-                                                "vram_fraction": vram_fraction,
-                                                "ram_source": ram_source,
-                                                "vram_source": vram_source,
-                                            },
+                        for depth in depth_values:
+                            for seed in family_seeds:
+                                for thread_mode in active_thread_modes:
+                                    total_loops = warmups + repeats
+                                    for offset in range(total_loops):
+                                        warmup = offset < warmups
+                                        repeat_index = offset if warmup else offset - warmups
+                                        manifest_id = (
+                                            f"{library}-{spec_index}-{family}-{device}-{precision}-{qubits}q-depth{depth}-"
+                                            f"seed{seed}-{thread_mode}-{'warmup' if warmup else f'rep{repeat_index}'}"
                                         )
-                                    )
-                                    generated += 1
-                                    if limit is not None and generated >= limit:
-                                        return cases
+                                        cases.append(
+                                            BenchmarkCase(
+                                                profile_name=str(profile.get("profile_name", "default")),
+                                                execution_env=str(profile["execution_env"]),
+                                                preliminary=bool(profile.get("preliminary", False)),
+                                                library=str(library),
+                                                backend=str(backend),
+                                                device=str(device).upper(),
+                                                precision=str(precision).lower(),
+                                                family=str(family),
+                                                qubits=int(qubits),
+                                                depth=depth,
+                                                seed=int(seed),
+                                                repeat_index=repeat_index,
+                                                warmup=warmup,
+                                                thread_mode=str(thread_mode),
+                                                timeout_s=timeout_s,
+                                                ram_limit_bytes=ram_limit_bytes,
+                                                vram_limit_bytes=vram_limit_bytes,
+                                                overhead_factor=overhead_factor,
+                                                max_reference_qubits=max_reference_qubits,
+                                                manifest_id=manifest_id,
+                                                variant=variant,
+                                                sim_method=sim_method,
+                                                execution_mode=execution_mode,
+                                                executor=executor,
+                                                backend_options=deepcopy(backend_options),
+                                                output_mode=output_mode,
+                                                output_qubits=output_qubits[:] if output_qubits is not None else None,
+                                                shots=shots,
+                                                noise_profile=noise_profile,
+                                                metadata={
+                                                    "spec_index": spec_index,
+                                                    "ram_fraction": ram_fraction,
+                                                    "vram_fraction": vram_fraction,
+                                                    "ram_source": ram_source,
+                                                    "vram_source": vram_source,
+                                                },
+                                            )
+                                        )
+                                        generated += 1
+                                        if limit is not None and generated >= limit:
+                                            return cases
     return cases

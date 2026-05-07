@@ -1,0 +1,118 @@
+{
+  "profile_name": "cuquantum-exact-frontier-wsl",
+  "execution_env": "wsl2_ubuntu_gpu_cuquantum_exact_frontier",
+  "preliminary": false,
+  "frontier_stop_on_failure": true,
+  "results_dir": "results/cuquantum-exact-frontier-wsl",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 2,
+    "repeats": 5,
+    "thread_modes": ["all"],
+    "execution_mode": "isolated_frontier",
+    "executor": "wsl_python",
+    "output_mode": "statevector",
+    "output_qubits": [0, 1, 2, 3, 4, 5, 6, 7],
+    "shots": 4096,
+    "noise_profile": "none",
+    "timeouts": {"case_s": 900},
+    "memory_limits": {
+      "ram_fraction": 0.75,
+      "vram_fraction": 0.80,
+      "overhead_factor": 1.5
+    }
+  },
+  "benchmarks": [
+    {
+      "variant": "cpu_statevector",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector"},
+      "devices": ["CPU"],
+      "precisions": ["double", "single"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 27, 28, 29, 30],
+        "random": [20, 22, 24, 26, 27, 28, 29, 30],
+        "ansatz": [20, 22, 24, 26, 27, 28, 29, 30],
+        "trotter": [20, 22, 24, 26, 27, 28, 29, 30]
+      },
+      "depths": {"ghz": 1, "random": 8, "ansatz": 6, "trotter": 12},
+      "memory_limits": {"ram_source": "total"},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_thrust",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector", "cuStateVec_enable": false},
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 27, 28, 29, 30],
+        "random": [20, 22, 24, 26, 27, 28, 29, 30],
+        "ansatz": [20, 22, 24, 26, 27, 28, 29, 30],
+        "trotter": [20, 22, 24, 26, 27, 28, 29, 30]
+      },
+      "depths": {"ghz": 1, "random": 8, "ansatz": 6, "trotter": 12},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_thrust",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector", "cuStateVec_enable": false},
+      "devices": ["GPU"],
+      "precisions": ["single"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 27, 28, 29, 30, 31],
+        "random": [20, 22, 24, 26, 27, 28, 29, 30, 31],
+        "ansatz": [20, 22, 24, 26, 27, 28, 29, 30, 31],
+        "trotter": [20, 22, 24, 26, 27, 28, 29, 30, 31]
+      },
+      "depths": {"ghz": 1, "random": 8, "ansatz": 6, "trotter": 12},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_custatevec",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector", "cuStateVec_enable": true},
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 27, 28, 29, 30],
+        "random": [20, 22, 24, 26, 27, 28, 29, 30],
+        "ansatz": [20, 22, 24, 26, 27, 28, 29, 30],
+        "trotter": [20, 22, 24, 26, 27, 28, 29, 30]
+      },
+      "depths": {"ghz": 1, "random": 8, "ansatz": 6, "trotter": 12},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    },
+    {
+      "variant": "gpu_custatevec",
+      "library": "qiskit_aer",
+      "backend": "aer_statevector",
+      "sim_method": "statevector",
+      "backend_options": {"method": "statevector", "cuStateVec_enable": true},
+      "devices": ["GPU"],
+      "precisions": ["single"],
+      "families": ["ghz", "random", "ansatz", "trotter"],
+      "qubit_grid": {
+        "ghz": [20, 22, 24, 26, 27, 28, 29, 30, 31],
+        "random": [20, 22, 24, 26, 27, 28, 29, 30, 31],
+        "ansatz": [20, 22, 24, 26, 27, 28, 29, 30, 31],
+        "trotter": [20, 22, 24, 26, 27, 28, 29, 30, 31]
+      },
+      "depths": {"ghz": 1, "random": 8, "ansatz": 6, "trotter": 12},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    }
+  ]
+}

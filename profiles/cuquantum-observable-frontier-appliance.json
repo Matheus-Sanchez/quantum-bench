@@ -1,0 +1,46 @@
+{
+  "profile_name": "cuquantum-observable-frontier-appliance",
+  "execution_env": "wsl2_docker_cuquantum_appliance_observable_frontier",
+  "preliminary": false,
+  "frontier_stop_on_failure": true,
+  "results_dir": "results/cuquantum-observable-frontier-appliance",
+  "max_reference_qubits": 12,
+  "defaults": {
+    "warmups": 2,
+    "repeats": 5,
+    "thread_modes": ["all"],
+    "execution_mode": "isolated_frontier",
+    "executor": "docker_wsl",
+    "output_mode": "marginal_probabilities",
+    "output_qubits": [0, 1, 2, 3, 4, 5, 6, 7],
+    "shots": 4096,
+    "noise_profile": "none",
+    "timeouts": {"case_s": 1200},
+    "backend_options": {"container_image": "nvcr.io/nvidia/cuquantum-appliance:25.09.1"},
+    "memory_limits": {
+      "ram_fraction": 0.75,
+      "vram_fraction": 0.80,
+      "overhead_factor": 1.5
+    }
+  },
+  "benchmarks": [
+    {
+      "variant": "appliance_tensornetwork",
+      "library": "qiskit_aer",
+      "backend": "aer_tensor_network",
+      "sim_method": "tensor_network",
+      "backend_options": {"method": "tensor_network", "use_cuTensorNet_autotuning": true},
+      "devices": ["GPU"],
+      "precisions": ["double"],
+      "families": ["ghz", "ansatz", "trotter", "random"],
+      "qubit_grid": {
+        "ghz": [24, 28, 32, 36, 40, 44],
+        "ansatz": [24, 28, 32, 36, 40, 44],
+        "trotter": [24, 28, 32, 36, 40, 44],
+        "random": [24, 28, 32, 34, 36]
+      },
+      "depths": {"ghz": 1, "random": 8, "ansatz": 6, "trotter": 12},
+      "seeds": {"ghz": [101], "default": [101, 202]}
+    }
+  ]
+}

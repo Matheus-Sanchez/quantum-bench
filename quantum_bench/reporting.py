@@ -13,6 +13,15 @@ def _is_true(value: Any) -> bool:
     return value in (True, "True", "true", "1", 1)
 
 
+def _variant(row: dict[str, Any]) -> str:
+    variant = str(row.get("variant") or "").strip()
+    if variant:
+        return variant
+    library = str(row.get("library") or "unknown")
+    device = str(row.get("device") or "unknown").lower()
+    return f"{library}_{device}"
+
+
 def _load_rows(input_dir: Path) -> list[dict[str, Any]]:
     direct = input_dir / "results.csv"
     csv_paths = [direct] if direct.exists() else sorted(input_dir.rglob("results.csv"))
@@ -47,8 +56,9 @@ def _round_or_none(value: float | None, digits: int = 3) -> float | None:
     return round(value, digits)
 
 
-def _group_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
+def _group_key(row: dict[str, Any]) -> tuple[str, str, str, str, str]:
     return (
+        _variant(row),
         str(row.get("library") or "unknown"),
         str(row.get("device") or "unknown"),
         str(row.get("precision") or "unknown"),
@@ -57,7 +67,7 @@ def _group_key(row: dict[str, Any]) -> tuple[str, str, str, str]:
 
 
 def _stable_frontier(non_warmup_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in non_warmup_rows:
         grouped[_group_key(row)].append(row)
 
@@ -83,10 +93,7 @@ def _stable_frontier(non_warmup_rows: list[dict[str, Any]]) -> list[dict[str, An
                 seed_groups[safe_int(row.get("seed"))].append(row)
             expected_repeats = 0
             for seed_rows in seed_groups.values():
-                expected_repeats = max(
-                    expected_repeats,
-                    len({safe_int(item.get("repeat_index")) for item in seed_rows}),
-                )
+                expected_repeats = max(expected_repeats, len({safe_int(item.get("repeat_index")) for item in seed_rows}))
             qubit_is_stable = (
                 len(seed_groups) == expected_seed_count
                 and expected_repeats > 0
@@ -101,10 +108,11 @@ def _stable_frontier(non_warmup_rows: list[dict[str, Any]]) -> list[dict[str, An
 
         frontiers.append(
             {
-                "library": key[0],
-                "device": key[1],
-                "precision": key[2],
-                "family": key[3],
+                "variant": key[0],
+                "library": key[1],
+                "device": key[2],
+                "precision": key[3],
+                "family": key[4],
                 "stable_max_qubits": max(stable_qubits) if stable_qubits else None,
                 "stable_qubits": stable_qubits,
                 "expected_seed_count": expected_seed_count,
@@ -115,12 +123,12 @@ def _stable_frontier(non_warmup_rows: list[dict[str, Any]]) -> list[dict[str, An
 
 
 def _group_summaries(non_warmup_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in non_warmup_rows:
         grouped[_group_key(row)].append(row)
 
     frontiers = {
-        (item["library"], item["device"], item["precision"], item["family"]): item
+        (item["variant"], item["library"], item["device"], item["precision"], item["family"]): item
         for item in _stable_frontier(non_warmup_rows)
     }
 
@@ -128,19 +136,32 @@ def _group_summaries(non_warmup_rows: list[dict[str, Any]]) -> list[dict[str, An
     for key, rows in sorted(grouped.items()):
         successes = _successful_rows(rows)
         wall_values = [value for value in (safe_float(row.get("wall_s")) for row in successes) if value is not None]
+        simulate_values = [value for value in (safe_float(row.get("simulate_s")) for row in successes) if value is not None]
         rss_values = [value for value in (safe_float(row.get("peak_rss_mb")) for row in successes) if value is not None]
         gpu_values = [value for value in (safe_float(row.get("gpu_peak_mem_mb")) for row in successes) if value is not None]
+        speedup_cpu_values = [value for value in (safe_float(row.get("speedup_vs_cpu")) for row in successes) if value is not None]
+        tvd_values = []
+        for row in successes:
+            value = safe_float(row.get("tvd_noisy_vs_ideal"))
+            if value is None:
+                value = safe_float(row.get("tvd_ref"))
+            if value is not None:
+                tvd_values.append(value)
         summary = {
-            "library": key[0],
-            "device": key[1],
-            "precision": key[2],
-            "family": key[3],
+            "variant": key[0],
+            "library": key[1],
+            "device": key[2],
+            "precision": key[3],
+            "family": key[4],
             "rows": len(rows),
             "success_rows": len(successes),
             "success_rate": _round_or_none(len(successes) / len(rows), 4) if rows else None,
+            "median_simulate_s": _round_or_none(median(simulate_values), 4),
             "median_wall_s": _round_or_none(median(wall_values), 4),
             "peak_rss_mb": _round_or_none(max(rss_values), 3) if rss_values else None,
             "peak_gpu_mem_mb": _round_or_none(max(gpu_values), 3) if gpu_values else None,
+            "median_speedup_vs_cpu": _round_or_none(median(speedup_cpu_values), 4),
+            "median_tvd": _round_or_none(median(tvd_values), 6),
             "stable_max_qubits": frontiers.get(key, {}).get("stable_max_qubits"),
         }
         summaries.append(summary)
@@ -155,12 +176,14 @@ def _slowest_cases(successful_rows: list[dict[str, Any]], limit: int = 5) -> lis
             continue
         ranked.append(
             {
+                "variant": _variant(row),
                 "library": row.get("library"),
                 "device": row.get("device"),
                 "precision": row.get("precision"),
                 "family": row.get("family"),
                 "qubits": safe_int(row.get("qubits")),
                 "seed": safe_int(row.get("seed")),
+                "simulate_s": _round_or_none(safe_float(row.get("simulate_s")), 4),
                 "wall_s": _round_or_none(wall_s, 4),
                 "peak_rss_mb": _round_or_none(safe_float(row.get("peak_rss_mb")), 3),
                 "gpu_peak_mem_mb": _round_or_none(safe_float(row.get("gpu_peak_mem_mb")), 3),
@@ -173,7 +196,7 @@ def _failure_summary(non_warmup_rows: list[dict[str, Any]]) -> dict[str, Any]:
     failures = [row for row in non_warmup_rows if not _is_true(row.get("success"))]
     error_types = Counter(str(row.get("error_type") or "unknown") for row in failures)
     backends = Counter(
-        f"{row.get('library') or 'unknown'}:{row.get('backend') or 'unknown'}:{row.get('device') or 'unknown'}:{row.get('precision') or 'unknown'}"
+        f"{_variant(row)}:{row.get('library') or 'unknown'}:{row.get('backend') or 'unknown'}:{row.get('device') or 'unknown'}:{row.get('precision') or 'unknown'}"
         for row in failures
     )
 
@@ -184,16 +207,12 @@ def _failure_summary(non_warmup_rows: list[dict[str, Any]]) -> dict[str, Any]:
         notes.append("Some cases were skipped by the harness because the estimated statevector exceeded the configured RAM/VRAM envelope.")
     if any(str(row.get("error_type") or "") == "timeout" for row in failures):
         notes.append("At least one case reached the configured per-case timeout.")
+    if any(_is_true(row.get("cuStateVec_requested")) and row.get("cuStateVec_effective") in ("", None, "None") for row in non_warmup_rows):
+        notes.append("Some runs requested cuStateVec but metadata did not explicitly confirm activation.")
 
     return {
-        "error_types": [
-            {"error_type": error_type, "count": count}
-            for error_type, count in error_types.most_common()
-        ],
-        "failures_by_backend": [
-            {"backend": backend, "count": count}
-            for backend, count in backends.most_common()
-        ],
+        "error_types": [{"error_type": error_type, "count": count} for error_type, count in error_types.most_common()],
+        "failures_by_backend": [{"backend": backend, "count": count} for backend, count in backends.most_common()],
         "notes": notes,
     }
 
@@ -205,6 +224,7 @@ def _resource_peaks(successful_rows: list[dict[str, Any]]) -> dict[str, Any]:
         rss = safe_float(row.get("peak_rss_mb"))
         gpu = safe_float(row.get("gpu_peak_mem_mb"))
         base = {
+            "variant": _variant(row),
             "library": row.get("library"),
             "device": row.get("device"),
             "precision": row.get("precision"),
@@ -227,10 +247,13 @@ def _resource_peaks(successful_rows: list[dict[str, Any]]) -> dict[str, Any]:
 def _matrix_summary(non_warmup_rows: list[dict[str, Any]]) -> dict[str, Any]:
     qubit_values = sorted({value for value in (safe_int(row.get("qubits")) for row in non_warmup_rows) if value is not None})
     return {
+        "variants": sorted({_variant(row) for row in non_warmup_rows}),
         "libraries": sorted({str(row.get("library") or "unknown") for row in non_warmup_rows}),
         "devices": sorted({str(row.get("device") or "unknown") for row in non_warmup_rows}),
         "precisions": sorted({str(row.get("precision") or "unknown") for row in non_warmup_rows}),
         "families": sorted({str(row.get("family") or "unknown") for row in non_warmup_rows}),
+        "output_modes": sorted({str(row.get("output_mode") or "statevector") for row in non_warmup_rows}),
+        "noise_profiles": sorted({str(row.get("noise_profile") or "none") for row in non_warmup_rows}),
         "qubit_values": qubit_values,
         "qubit_min": min(qubit_values) if qubit_values else None,
         "qubit_max": max(qubit_values) if qubit_values else None,
@@ -246,6 +269,7 @@ def _environment_summary(env_report: dict[str, Any] | None, manifest: dict[str, 
     return {
         "profile_name": manifest.get("profile_name"),
         "execution_env": manifest.get("execution_env"),
+        "schema_version": manifest.get("schema_version"),
         "hostname": host.get("hostname"),
         "platform": host.get("platform"),
         "python_version": host.get("python_version"),
@@ -255,7 +279,30 @@ def _environment_summary(env_report: dict[str, Any] | None, manifest: dict[str, 
         "qiskit_version": packages.get("qiskit"),
         "qiskit_aer_version": packages.get("qiskit-aer"),
         "qulacs_version": packages.get("qulacs"),
+        "cuquantum_version": packages.get("cuquantum"),
     }
+
+
+def _dominant_bottlenecks(successful_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in successful_rows:
+        grouped[_variant(row)].append(row)
+    result = []
+    for variant, rows in sorted(grouped.items()):
+        medians = {
+            "backend_init_s": _round_or_none(_median_or_none(row.get("backend_init_s") for row in rows), 6),
+            "transpile_s": _round_or_none(_median_or_none(row.get("transpile_s") for row in rows), 6),
+            "simulate_s": _round_or_none(_median_or_none(row.get("simulate_s") for row in rows), 6),
+            "extract_s": _round_or_none(_median_or_none(row.get("extract_s") for row in rows), 6),
+        }
+        dominant = max((key for key, value in medians.items() if value is not None), key=lambda key: medians[key] or 0.0, default=None)
+        result.append({"variant": variant, "dominant_bottleneck": dominant, **medians})
+    return result
+
+
+def _median_or_none(values: Any) -> float | None:
+    clean = [value for value in (safe_float(item) for item in values) if value is not None]
+    return median(clean)
 
 
 def _render_analysis_report(summary: dict[str, Any]) -> str:
@@ -276,6 +323,7 @@ def _render_analysis_report(summary: dict[str, Any]) -> str:
         "## Environment",
         f"- Profile: `{environment.get('profile_name')}`",
         f"- Execution env: `{environment.get('execution_env')}`",
+        f"- Schema version: `{environment.get('schema_version')}`",
         f"- Host: `{environment.get('hostname')}`",
         f"- Platform: `{environment.get('platform')}`",
         f"- Python: `{environment.get('python_version')}`",
@@ -285,33 +333,40 @@ def _render_analysis_report(summary: dict[str, Any]) -> str:
         f"- Qiskit: `{environment.get('qiskit_version')}`",
         f"- Qiskit Aer: `{environment.get('qiskit_aer_version')}`",
         f"- Qulacs: `{environment.get('qulacs_version')}`",
+        f"- cuQuantum: `{environment.get('cuquantum_version')}`",
         "",
         "## Matrix",
         f"- Non-warmup success rate: `{counts['success_rate_non_warmup_pct']:.2f}%` ({counts['successful_non_warmup_rows']}/{counts['non_warmup_rows']})" if counts["non_warmup_rows"] else "- Non-warmup success rate: `n/a`",
+        f"- Variants: `{', '.join(matrix['variants']) or 'n/a'}`",
         f"- Libraries: `{', '.join(matrix['libraries']) or 'n/a'}`",
         f"- Devices: `{', '.join(matrix['devices']) or 'n/a'}`",
         f"- Precisions: `{', '.join(matrix['precisions']) or 'n/a'}`",
         f"- Families: `{', '.join(matrix['families']) or 'n/a'}`",
+        f"- Output modes: `{', '.join(matrix['output_modes']) or 'n/a'}`",
+        f"- Noise profiles: `{', '.join(matrix['noise_profiles']) or 'n/a'}`",
         f"- Qubit span: `{matrix['qubit_min']}..{matrix['qubit_max']}`" if matrix["qubit_min"] is not None else "- Qubit span: `n/a`",
         f"- Qubit values: `{', '.join(str(value) for value in matrix['qubit_values'])}`" if matrix["qubit_values"] else "- Qubit values: `n/a`",
         "",
         "## Stable Frontier",
-        "| Library | Device | Precision | Family | Stable max qubits | Median wall_s | Peak RSS MB | Peak GPU MB |",
-        "|---|---|---|---|---:|---:|---:|---:|",
+        "| Variant | Library | Device | Precision | Family | Stable max qubits | Median simulate_s | Median wall_s | Speedup vs CPU | Median TVD | Peak RSS MB | Peak GPU MB |",
+        "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
 
     summary_lookup = {
-        (item["library"], item["device"], item["precision"], item["family"]): item
+        (item["variant"], item["library"], item["device"], item["precision"], item["family"]): item
         for item in summary["group_summaries"]
     }
     for item in frontiers:
-        key = (item["library"], item["device"], item["precision"], item["family"])
+        key = (item["variant"], item["library"], item["device"], item["precision"], item["family"])
         group = summary_lookup.get(key, {})
         lines.append(
             "| "
-            f"{item['library']} | {item['device']} | {item['precision']} | {item['family']} | "
+            f"{item['variant']} | {item['library']} | {item['device']} | {item['precision']} | {item['family']} | "
             f"{item['stable_max_qubits'] if item['stable_max_qubits'] is not None else '-'} | "
+            f"{group.get('median_simulate_s') if group.get('median_simulate_s') is not None else '-'} | "
             f"{group.get('median_wall_s') if group.get('median_wall_s') is not None else '-'} | "
+            f"{group.get('median_speedup_vs_cpu') if group.get('median_speedup_vs_cpu') is not None else '-'} | "
+            f"{group.get('median_tvd') if group.get('median_tvd') is not None else '-'} | "
             f"{group.get('peak_rss_mb') if group.get('peak_rss_mb') is not None else '-'} | "
             f"{group.get('peak_gpu_mem_mb') if group.get('peak_gpu_mem_mb') is not None else '-'} |"
         )
@@ -320,20 +375,20 @@ def _render_analysis_report(summary: dict[str, Any]) -> str:
         [
             "",
             "## Slowest Successful Cases",
-            "| Library | Device | Precision | Family | Qubits | Seed | Wall s | Peak RSS MB | Peak GPU MB |",
-            "|---|---|---|---|---:|---:|---:|---:|---:|",
+            "| Variant | Library | Device | Precision | Family | Qubits | Seed | Simulate s | Wall s | Peak RSS MB | Peak GPU MB |",
+            "|---|---|---|---|---|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for item in slowest:
         lines.append(
             "| "
-            f"{item['library']} | {item['device']} | {item['precision']} | {item['family']} | "
-            f"{item['qubits']} | {item['seed']} | {item['wall_s']} | "
+            f"{item['variant']} | {item['library']} | {item['device']} | {item['precision']} | {item['family']} | "
+            f"{item['qubits']} | {item['seed']} | {item['simulate_s'] if item['simulate_s'] is not None else '-'} | {item['wall_s']} | "
             f"{item['peak_rss_mb'] if item['peak_rss_mb'] is not None else '-'} | "
             f"{item['gpu_peak_mem_mb'] if item['gpu_peak_mem_mb'] is not None else '-'} |"
         )
     if not slowest:
-        lines.append("| - | - | - | - | - | - | - | - | - |")
+        lines.append("| - | - | - | - | - | - | - | - | - | - | - |")
 
     lines.extend(
         [
@@ -342,22 +397,37 @@ def _render_analysis_report(summary: dict[str, Any]) -> str:
             f"- Max RSS case: `{json.dumps(peaks['max_rss_case'], ensure_ascii=False)}`" if peaks["max_rss_case"] else "- Max RSS case: `n/a`",
             f"- Max GPU memory case: `{json.dumps(peaks['max_gpu_mem_case'], ensure_ascii=False)}`" if peaks["max_gpu_mem_case"] else "- Max GPU memory case: `n/a`",
             "",
+            "## Dominant Bottlenecks",
+            "| Variant | Dominant | Backend init s | Transpile s | Simulate s | Extract s |",
+            "|---|---|---:|---:|---:|---:|",
+        ]
+    )
+    for item in summary["dominant_bottlenecks"]:
+        lines.append(
+            f"| {item['variant']} | {item['dominant_bottleneck'] or '-'} | "
+            f"{item['backend_init_s'] if item['backend_init_s'] is not None else '-'} | "
+            f"{item['transpile_s'] if item['transpile_s'] is not None else '-'} | "
+            f"{item['simulate_s'] if item['simulate_s'] is not None else '-'} | "
+            f"{item['extract_s'] if item['extract_s'] is not None else '-'} |"
+        )
+    if not summary["dominant_bottlenecks"]:
+        lines.append("| - | - | - | - | - | - |")
+
+    lines.extend(
+        [
+            "",
             "## Failure Summary",
         ]
     )
 
     if failure_summary["error_types"]:
-        top_errors = ", ".join(
-            f"{item['error_type']} ({item['count']})" for item in failure_summary["error_types"][:5]
-        )
+        top_errors = ", ".join(f"{item['error_type']} ({item['count']})" for item in failure_summary["error_types"][:5])
         lines.append(f"- Top error types: `{top_errors}`")
     else:
         lines.append("- Top error types: `none`")
 
     if failure_summary["failures_by_backend"]:
-        top_backends = ", ".join(
-            f"{item['backend']} ({item['count']})" for item in failure_summary["failures_by_backend"][:5]
-        )
+        top_backends = ", ".join(f"{item['backend']} ({item['count']})" for item in failure_summary["failures_by_backend"][:5])
         lines.append(f"- Failures by backend: `{top_backends}`")
     else:
         lines.append("- Failures by backend: `none`")
@@ -384,9 +454,7 @@ def build_analysis_report(input_dir: Path, output_dir: Path | None = None) -> di
         "non_warmup_rows": len(non_warmup_rows),
         "successful_non_warmup_rows": len(successful_rows),
         "failed_non_warmup_rows": len(non_warmup_rows) - len(successful_rows),
-        "success_rate_non_warmup_pct": round((len(successful_rows) / len(non_warmup_rows)) * 100.0, 2)
-        if non_warmup_rows
-        else 0.0,
+        "success_rate_non_warmup_pct": round((len(successful_rows) / len(non_warmup_rows)) * 100.0, 2) if non_warmup_rows else 0.0,
     }
 
     summary = {
@@ -401,6 +469,7 @@ def build_analysis_report(input_dir: Path, output_dir: Path | None = None) -> di
         "group_summaries": _group_summaries(non_warmup_rows),
         "slowest_successful_cases": _slowest_cases(successful_rows),
         "resource_peaks": _resource_peaks(successful_rows),
+        "dominant_bottlenecks": _dominant_bottlenecks(successful_rows),
         "failure_summary": _failure_summary(rows),
     }
 

@@ -31,6 +31,10 @@ The project is organized around two ideas:
 
 The repository now includes a GitHub-safe benchmark report for the current machine, based on the validated `WSL2 + Qiskit Aer GPU` path and the clean-start frontier methodology.
 
+- Extended cuQuantum campaign: [docs/reports/cuquantum-benchmark-campaign.md](docs/reports/cuquantum-benchmark-campaign.md)
+- cuQuantum profile spreadsheet: [docs/data/cuquantum-profile-summary.csv](docs/data/cuquantum-profile-summary.csv)
+- cuQuantum frontier spreadsheet: [docs/data/cuquantum-frontier-summary.csv](docs/data/cuquantum-frontier-summary.csv)
+- cuQuantum error spreadsheet: [docs/data/cuquantum-error-summary.csv](docs/data/cuquantum-error-summary.csv)
 - Canonical report: [docs/reports/current-machine-frontier.md](docs/reports/current-machine-frontier.md)
 - Structured summary: [docs/data/current-machine-frontier.json](docs/data/current-machine-frontier.json)
 - Hardware specification: [docs/data/current-machine-hardware.json](docs/data/current-machine-hardware.json)
@@ -233,6 +237,7 @@ The raw timestamped machine outputs that generated those summaries remain local 
   - `run-wsl`
   - `plot`
   - `report`
+  - `compare`
   - `env-report`
   - `capability-probe`
 
@@ -240,7 +245,7 @@ Out of scope for this version:
 
 - `qsim/Cirq`
 - `ProjectQ`
-- density-matrix and noise campaigns
+- real-provider calibrated noise campaigns
 - `W`, `HHL`, and `SupermarQ`
 
 ## Project layout
@@ -253,6 +258,8 @@ quantum_bench/
   config.py          profile expansion
   env_report.py      machine metadata
   plotting.py        plot generation
+  probability.py     probability normalization and divergence metrics
+  artifacts.py       probability sidecars, accumulation summaries, run plots
   reporting.py       JSON/Markdown analysis summaries
   recipes.py         canonical circuit recipes
   reference.py       small exact simulator for correctness checks
@@ -269,6 +276,13 @@ profiles/
   dev-wsl-gpu.json
   frontier-wsl-gpu.json
   frontier-wsl-qulacs.json
+  cuquantum-speed-sweep-wsl.json
+  cuquantum-exact-frontier-wsl.json
+  cuquantum-observable-frontier-wsl.json
+  cuquantum-ideal-depth-sweep-wsl.json
+  cuquantum-noisy-depth-sweep-wsl.json
+  cuquantum-exact-frontier-appliance.json
+  cuquantum-observable-frontier-appliance.json
 
 scripts/
   run_wsl_frontier_precision.ps1
@@ -276,7 +290,7 @@ scripts/
 
 ## Profiles
 
-The repository ships with five profiles:
+The repository ships with the original development/frontier profiles plus canonical cuQuantum campaigns:
 
 - `profiles/dev.json`
   Short development profile for Windows CPU and partial GPU-path validation.
@@ -288,6 +302,20 @@ The repository ships with five profiles:
   WSL2/Linux frontier profile focused on the heaviest validated `Qiskit Aer` CPU/GPU statevector cases on the current class of machine.
 - `profiles/frontier-wsl-qulacs.json`
   Shorter WSL2/Linux extension profile for `Qulacs` CPU/GPU after the main frontier run.
+- `profiles/cuquantum-speed-sweep-wsl.json`
+  WSL2/Linux comparison profile for `cpu_statevector`, `gpu_thrust`, and `gpu_custatevec` with real `persistent_group` execution.
+- `profiles/cuquantum-exact-frontier-wsl.json`
+  WSL2/Linux exact-frontier profile for `cpu_statevector`, `gpu_thrust`, and `gpu_custatevec` in `double` and `single`.
+- `profiles/cuquantum-observable-frontier-wsl.json`
+  WSL2/Linux observable-frontier profile comparing full statevector baselines against `gpu_tensornetwork` for marginal probabilities.
+- `profiles/cuquantum-ideal-depth-sweep-wsl.json`
+  Ideal numeric depth sweep for `ansatz`, `random`, and `trotter`, with exact references up to 12 qubits and marginal outputs above that.
+- `profiles/cuquantum-noisy-depth-sweep-wsl.json`
+  Synthetic probabilistic noise sweep using `synthetic_canonical_v1`, `counts`, and 4096 shots by default.
+- `profiles/cuquantum-exact-frontier-appliance.json`
+  Docker/appliance exact-frontier profile for `appliance_cusvaer`; missing Docker or NVIDIA Container Toolkit produces a clear diagnostic row.
+- `profiles/cuquantum-observable-frontier-appliance.json`
+  Docker/appliance observable-frontier profile for `appliance_tensornetwork` with the same diagnostic policy.
 
 The frontier profiles also enable `frontier_stop_on_failure`, so once a qubit level fails for a given `(library, backend, device, precision, family)` slice, the remaining equal-or-higher cases in that slice are pruned instead of repeatedly hammering the same unstable boundary.
 
@@ -387,6 +415,33 @@ To regenerate the committed public plots from the curated JSON files:
 python scripts/generate_public_report_assets.py
 ```
 
+Phase 1 cuQuantum speed sweep:
+
+```powershell
+python -m quantum_bench run-wsl --profile profiles/cuquantum-speed-sweep-wsl.json --capabilities artifacts/capabilities-wsl-frontier.json --repo-root . --wsl-python .venv-wsl/bin/python
+```
+
+Phase 1 cuQuantum exact frontier:
+
+```powershell
+python -m quantum_bench run-wsl --profile profiles/cuquantum-exact-frontier-wsl.json --capabilities artifacts/capabilities-wsl-frontier.json --repo-root . --wsl-python .venv-wsl/bin/python
+```
+
+Full cuQuantum metric campaigns:
+
+```powershell
+python -m quantum_bench run-wsl --profile profiles/cuquantum-observable-frontier-wsl.json --capabilities artifacts/capabilities-wsl-frontier.json --repo-root . --wsl-python .venv-wsl/bin/python
+python -m quantum_bench run-wsl --profile profiles/cuquantum-ideal-depth-sweep-wsl.json --capabilities artifacts/capabilities-wsl-frontier.json --repo-root . --wsl-python .venv-wsl/bin/python
+python -m quantum_bench run-wsl --profile profiles/cuquantum-noisy-depth-sweep-wsl.json --capabilities artifacts/capabilities-wsl-frontier.json --repo-root . --wsl-python .venv-wsl/bin/python
+```
+
+Appliance profiles use `executor=docker_wsl`:
+
+```powershell
+python -m quantum_bench run-wsl --profile profiles/cuquantum-exact-frontier-appliance.json --repo-root . --wsl-python .venv-wsl/bin/python
+python -m quantum_bench run-wsl --profile profiles/cuquantum-observable-frontier-appliance.json --repo-root . --wsl-python .venv-wsl/bin/python
+```
+
 ### 4. Generate analysis report
 
 ```bash
@@ -398,7 +453,18 @@ Typical outputs:
 - `analysis-summary.json`
 - `analysis-report.md`
 
-### 5. Generate plots
+### 5. Compare multiple result directories
+
+```bash
+python -m quantum_bench compare --input-dir results/cuquantum-speed-sweep-wsl/<run-a> --input-dir results/cuquantum-speed-sweep-wsl/<run-b> --output-dir results/cuquantum-compare
+```
+
+Typical outputs:
+
+- `comparison-summary.json`
+- `comparison-report.md`
+
+### 6. Generate plots
 
 ```bash
 python -m quantum_bench plot --input-dir results/dev/... --output-dir plots/dev
@@ -422,8 +488,15 @@ Each run creates a timestamped directory containing:
 - `manifest.json`
 - `results.csv`
 - `results.json`
+- `distribution-snapshots.jsonl`
+- `probability-matrix.json`
+- `error-accumulation-summary.json`
+- `artifact-status.json`
+- run-level plots such as `tvd_vs_depth.png`, `jsd_vs_depth.png`, `time_breakdown_stacked.png`, `memory_vs_qubits.png`, `exact_frontier_by_variant.png`, and `observable_frontier_by_variant.png`
 - `analysis-summary.json` after running `report`
 - `analysis-report.md` after running `report`
+- `comparison-summary.json` after running `compare`
+- `comparison-report.md` after running `compare`
 
 Important CSV columns:
 
@@ -437,6 +510,14 @@ Important CSV columns:
   Peak GPU memory observed in MB.
 - `state_fidelity_ref`
   Fidelity against the small exact reference simulator when the qubit count is within the reference budget.
+- `prob_l1_ref`, `tvd_ref`, `hellinger_ref`, `jsd_ref`
+  Probability-distribution divergence against the ideal reference when available.
+- `tvd_noisy_vs_ideal`, `hellinger_noisy_vs_ideal`, `jsd_noisy_vs_ideal`
+  Synthetic-noise degradation metrics for probabilistic runs.
+- `speedup_vs_cpu`, `speedup_vs_gpu_thrust`
+  Pointwise speedups matched by family, qubits, depth, precision, noise profile, and output mode.
+- `backend_init_s`, `transpile_s`, `simulate_s`, `extract_s`
+  Timing breakdown used to identify the dominant bottleneck.
 
 ## Current results on this machine
 

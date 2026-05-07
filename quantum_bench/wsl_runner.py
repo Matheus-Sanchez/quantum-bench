@@ -11,7 +11,12 @@ from typing import Any
 
 from quantum_bench.config import expand_cases, profile_requires_capabilities
 from quantum_bench.models import BenchmarkCase
-from quantum_bench.runner import _resource_limit_error, build_error_row, build_result_dir, run_profile
+from quantum_bench.runner import (
+    _resource_limit_error,
+    build_error_row,
+    build_result_dir,
+    run_profile,
+)
 from quantum_bench.utils import load_json, windows_to_wsl_path
 
 
@@ -176,6 +181,97 @@ def invoke_case_wsl(
             )
 
 
+def invoke_group_wsl(
+    cases: list[BenchmarkCase],
+    *,
+    repo_root: Path,
+    python_path: str = ".venv-wsl/bin/python",
+    distro: str | None = None,
+    transport_retries: int = 1,
+    startup_buffer_s: int = 30,
+) -> list[dict[str, Any]]:
+    if not cases:
+        return []
+
+    if any(_resource_limit_error(case) for case in cases):
+        return [
+            build_error_row(case, error_type="estimated_limit", error=_resource_limit_error(case) or "estimated_limit")
+            for case in cases
+        ]
+
+    with tempfile.TemporaryDirectory(prefix="quantum-bench-wsl-group-") as temp_dir_name:
+        temp_dir = Path(temp_dir_name)
+        payload_path = temp_dir / "cases.json"
+        output_path = temp_dir / "rows.json"
+        payload_path.write_text(json.dumps([case.to_dict() for case in cases], ensure_ascii=False), encoding="utf-8")
+
+        payload_wsl = windows_to_wsl_path(payload_path)
+        output_wsl = windows_to_wsl_path(output_path)
+        thread_count = "1" if cases[0].thread_mode == "single" else str(os.cpu_count() or 1)
+        bash_script = (
+            f"OMP_NUM_THREADS={thread_count} "
+            f"QULACS_NUM_THREADS={thread_count} "
+            f"{shlex.quote(python_path)} -m quantum_bench _internal-run-group "
+            f"--payload {shlex.quote(payload_wsl)} --output {shlex.quote(output_wsl)}"
+        )
+
+        attempts = 0
+        while True:
+            started = time.perf_counter()
+            timeout_s = max(1, sum(case.timeout_s for case in cases)) + startup_buffer_s
+            try:
+                completed = _run_wsl_bash(
+                    repo_root,
+                    bash_script,
+                    distro=distro,
+                    timeout_s=timeout_s,
+                )
+            except subprocess.TimeoutExpired as exc:
+                return [
+                    build_error_row(
+                        cases[0],
+                        error_type="timeout",
+                        error=f"timeout_after_{timeout_s}s:{exc}",
+                        wall_s=time.perf_counter() - started,
+                    ),
+                    *[
+                        build_error_row(
+                            case,
+                            error_type="group_aborted_after_warmup_failure",
+                            error="group_aborted_after_timeout",
+                        )
+                        for case in cases[1:]
+                    ],
+                ]
+
+            if output_path.exists():
+                payload = load_json(output_path)
+                return payload if isinstance(payload, list) else [payload]
+
+            combined = (completed.stderr or "") + "\n" + (completed.stdout or "")
+            if attempts < transport_retries and _is_wsl_transport_error(combined):
+                attempts += 1
+                time.sleep(3)
+                continue
+
+            return [
+                build_error_row(
+                    cases[0],
+                    error_type=f"wsl_exit_{completed.returncode}",
+                    error=(combined.strip() or "wsl_group_failed"),
+                    wall_s=time.perf_counter() - started,
+                ),
+                *[
+                    build_error_row(
+                        case,
+                        error_type="group_aborted_after_warmup_failure",
+                        error="group_aborted_after_wsl_failure",
+                    )
+                    for case in cases[1:]
+                ],
+            ]
+
+
 def run_profile_wsl(
     profile: dict[str, Any],
     *,
@@ -219,6 +315,13 @@ def run_profile_wsl(
         capability_report=capability_report,
         case_invoker=lambda case: invoke_case_wsl(
             case,
+            repo_root=repo_root,
+            python_path=python_path,
+            distro=distro,
+            transport_retries=transport_retries,
+        ),
+        group_invoker=lambda grouped_cases: invoke_group_wsl(
+            grouped_cases,
             repo_root=repo_root,
             python_path=python_path,
             distro=distro,

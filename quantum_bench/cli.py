@@ -4,13 +4,23 @@ import argparse
 from pathlib import Path
 
 from quantum_bench.capability import build_capability_report
+from quantum_bench.comparison import build_comparison_report
 from quantum_bench.config import expand_cases, load_profile, profile_requires_capabilities
 from quantum_bench.env_report import build_env_report
 from quantum_bench.plotting import generate_plots
 from quantum_bench.reporting import build_analysis_report
-from quantum_bench.runner import build_result_dir, run_profile, write_child_output
+from quantum_bench.runner import build_result_dir, run_profile, write_child_output, write_group_output
 from quantum_bench.utils import ensure_directory, load_json, write_json
 from quantum_bench.wsl_runner import run_profile_wsl
+
+
+def _describe_case(case) -> str:
+    return (
+        f"{case.variant} {case.library} {case.family} {case.qubits}q {case.device} {case.precision} "
+        f"{case.sim_method} {case.execution_mode} {case.output_mode} "
+        f"noise={case.noise_profile} executor={case.executor} "
+        f"{case.thread_mode} {'warmup' if case.warmup else f'rep{case.repeat_index}'}"
+    )
 
 
 def _command_env_report(args: argparse.Namespace) -> int:
@@ -47,10 +57,7 @@ def _command_run(args: argparse.Namespace) -> int:
     if args.dry_run:
         print(f"Expanded {len(cases)} cases")
         for case in cases[: min(10, len(cases))]:
-            print(
-                f"{case.library} {case.family} {case.qubits}q {case.device} {case.precision} "
-                f"{case.thread_mode} {'warmup' if case.warmup else f'rep{case.repeat_index}'}"
-            )
+            print(_describe_case(case))
         return 0
 
     result_dir = build_result_dir(
@@ -72,10 +79,7 @@ def _command_run_wsl(args: argparse.Namespace) -> int:
         cases = expand_cases(profile, capability_report=capability_report, limit=args.limit)
         print(f"Expanded {len(cases)} cases")
         for case in cases[: min(10, len(cases))]:
-            print(
-                f"{case.library} {case.family} {case.qubits}q {case.device} {case.precision} "
-                f"{case.thread_mode} {'warmup' if case.warmup else f'rep{case.repeat_index}'}"
-            )
+            print(_describe_case(case))
         return 0
 
     outcome = run_profile_wsl(
@@ -114,8 +118,23 @@ def _command_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_compare(args: argparse.Namespace) -> int:
+    input_dirs = [Path(path) for path in args.input_dir]
+    output_dir = Path(args.output_dir) if args.output_dir else None
+    report = build_comparison_report(input_dirs, output_dir)
+    print(
+        f"Wrote comparison summary to {report['summary_path']} and markdown report to {report['report_path']}"
+    )
+    return 0
+
+
 def _command_internal_run_case(args: argparse.Namespace) -> int:
     write_child_output(args.payload, args.output)
+    return 0
+
+
+def _command_internal_run_group(args: argparse.Namespace) -> int:
+    write_group_output(args.payload, args.output)
     return 0
 
 
@@ -165,10 +184,20 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--output-dir")
     report.set_defaults(func=_command_report)
 
+    compare = subparsers.add_parser("compare", help="Compare multiple result directories")
+    compare.add_argument("--input-dir", required=True, action="append")
+    compare.add_argument("--output-dir")
+    compare.set_defaults(func=_command_compare)
+
     internal = subparsers.add_parser("_internal-run-case")
     internal.add_argument("--payload", required=True)
     internal.add_argument("--output", required=True)
     internal.set_defaults(func=_command_internal_run_case)
+
+    internal_group = subparsers.add_parser("_internal-run-group")
+    internal_group.add_argument("--payload", required=True)
+    internal_group.add_argument("--output", required=True)
+    internal_group.set_defaults(func=_command_internal_run_group)
 
     return parser
 

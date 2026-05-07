@@ -1,0 +1,74 @@
+campaign_id,profile_name,variant,device,precision,family,rows,success_rows,success_rate_pct,stable_max_qubits,highest_success_qubits,first_failure_qubits,highest_tested_qubits,tested_qubits,median_simulate_s,median_wall_s,median_speedup_vs_cpu,median_tvd,peak_rss_mb,peak_gpu_mem_mb
+speed-sweep,cuquantum-speed-sweep-wsl,cpu_statevector,CPU,double,ansatz,50,50,100.0,28,28,,28,20 22 24 26 28,1.093,2.6854,1.0,,14675.738,576.617
+speed-sweep,cuquantum-speed-sweep-wsl,cpu_statevector,CPU,double,ghz,25,25,100.0,28,28,,28,20 22 24 26 28,0.1905,1.7509,1.0,,14674.988,576.617
+speed-sweep,cuquantum-speed-sweep-wsl,cpu_statevector,CPU,double,random,50,50,100.0,28,28,,28,20 22 24 26 28,0.8598,2.4884,1.0,,14675.758,576.617
+speed-sweep,cuquantum-speed-sweep-wsl,cpu_statevector,CPU,double,trotter,50,50,100.0,28,28,,28,20 22 24 26 28,2.0912,3.6792,1.0,,14679.242,576.617
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_custatevec,GPU,double,ansatz,50,50,100.0,28,28,,28,20 22 24 26 28,1.1929,2.741,1.3688,,14797.371,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_custatevec,GPU,double,ghz,25,25,100.0,28,28,,28,20 22 24 26 28,0.3114,1.81,0.6609,,14794.016,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_custatevec,GPU,double,random,50,50,100.0,28,28,,28,20 22 24 26 28,0.8968,2.4107,1.3599,,14803.242,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_custatevec,GPU,double,trotter,50,50,100.0,28,28,,28,20 22 24 26 28,1.9438,3.5054,1.5403,,14798.285,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_thrust,GPU,double,ansatz,50,50,100.0,28,28,,28,20 22 24 26 28,1.7048,3.2175,0.8915,,14780.879,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_thrust,GPU,double,ghz,25,25,100.0,28,28,,28,20 22 24 26 28,0.4136,1.8496,0.5507,,14779.336,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_thrust,GPU,double,random,50,50,100.0,28,28,,28,20 22 24 26 28,1.1388,2.6142,1.0345,,14776.078,675.258
+speed-sweep,cuquantum-speed-sweep-wsl,gpu_thrust,GPU,double,trotter,50,50,100.0,28,28,,28,20 22 24 26 28,2.7831,4.3179,1.0601,,14782.293,675.258
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,double,ansatz,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,double,ghz,40,30,75.0,28,28,29,30,20 22 24 26 27 28 29 30,0.4838,10.3695,1.0,,14672.727,620.965
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,double,random,80,8,10.0,,20,20,30,20 22 24 26 27 28 29 30,0.0821,5.5541,1.0216,,352.234,661.516
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,double,trotter,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,single,ansatz,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,single,ghz,40,30,75.0,28,28,29,30,20 22 24 26 27 28 29 30,0.5345,10.1603,1.0,,14674.035,661.516
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,single,random,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,cpu_statevector,CPU,single,trotter,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,double,ansatz,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,double,ghz,40,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,double,random,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,double,trotter,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,single,ansatz,90,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,single,ghz,45,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,single,random,90,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_custatevec,GPU,single,trotter,90,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,double,ansatz,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,double,ghz,40,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,double,random,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,double,trotter,80,0,0,,,20,30,20 22 24 26 27 28 29 30,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,single,ansatz,90,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,single,ghz,45,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,single,random,90,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+exact-frontier,cuquantum-exact-frontier-wsl,gpu_thrust,GPU,single,trotter,90,0,0,,,20,31,20 22 24 26 27 28 29 30 31,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,cpu_statevector,CPU,double,ansatz,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,cpu_statevector,CPU,double,ghz,30,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,cpu_statevector,CPU,double,random,50,0,0,,,24,36,24 28 32 34 36,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,cpu_statevector,CPU,double,trotter,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_custatevec,GPU,double,ansatz,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_custatevec,GPU,double,ghz,30,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_custatevec,GPU,double,random,50,0,0,,,24,36,24 28 32 34 36,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_custatevec,GPU,double,trotter,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_tensornetwork,GPU,double,ansatz,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_tensornetwork,GPU,double,ghz,30,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_tensornetwork,GPU,double,random,50,0,0,,,24,36,24 28 32 34 36,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_tensornetwork,GPU,double,trotter,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_thrust,GPU,double,ansatz,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_thrust,GPU,double,ghz,30,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_thrust,GPU,double,random,50,0,0,,,24,36,24 28 32 34 36,,,,,,
+observable-frontier,cuquantum-observable-frontier-wsl,gpu_thrust,GPU,double,trotter,60,0,0,,,24,44,24 28 32 36 40 44,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,cpu_statevector,CPU,double,ansatz,210,0,0,,,8,12,8 10 12,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,cpu_statevector,CPU,double,random,210,0,0,,,8,12,8 10 12,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,cpu_statevector,CPU,double,trotter,210,0,0,,,8,12,8 10 12,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,gpu_tensornetwork,GPU,double,ansatz,280,0,0,,,16,28,16 20 24 28,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,gpu_tensornetwork,GPU,double,random,280,0,0,,,16,28,16 20 24 28,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,gpu_tensornetwork,GPU,double,trotter,280,0,0,,,16,28,16 20 24 28,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,gpu_thrust,GPU,double,ansatz,280,0,0,,,16,28,16 20 24 28,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,gpu_thrust,GPU,double,random,280,0,0,,,16,28,16 20 24 28,,,,,,
+ideal-depth,cuquantum-ideal-depth-sweep-wsl,gpu_thrust,GPU,double,trotter,280,0,0,,,16,28,16 20 24 28,,,,,,
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,cpu_statevector,CPU,double,ansatz,240,170,70.83,16,20,20,24,12 16 20 24,12.4794,12.5484,1.0,0.096503,731.172,663.508
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,cpu_statevector,CPU,double,ghz,120,90,75.0,20,20,24,24,12 16 20 24,3.5741,3.6394,1.0,0.021973,1206.352,661.516
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,cpu_statevector,CPU,double,trotter,240,170,70.83,16,20,20,24,12 16 20 24,11.9071,11.9772,1.0,0.086597,871.785,626.141
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_custatevec,GPU,double,ansatz,240,0,0,,,12,24,12 16 20 24,,,,,,
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_custatevec,GPU,double,ghz,120,0,0,,,12,24,12 16 20 24,,,,,,
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_custatevec,GPU,double,trotter,240,0,0,,,12,24,12 16 20 24,,,,,,
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_tensornetwork,GPU,double,ansatz,240,4,1.67,,16,12,24,12 16 20 24,128.7328,128.7842,0.0091,0.04425,831.051,826.227
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_tensornetwork,GPU,double,ghz,120,3,2.5,,24,12,24,12 16 20 24,17.7273,17.7955,0.0137,0.022461,793.969,826.227
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_tensornetwork,GPU,double,trotter,240,10,4.17,,24,12,24,12 16 20 24,67.1001,67.1738,2.1463,0.104842,851.352,882.48
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_thrust,GPU,double,ansatz,240,155,64.58,16,20,20,24,12 16 20 24,33.9645,34.0378,0.5109,0.096185,461.926,819.656
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_thrust,GPU,double,ghz,120,90,75.0,20,20,24,24,12 16 20 24,8.0727,8.1389,0.4425,0.021484,413.57,819.203
+noisy-depth,cuquantum-noisy-depth-sweep-wsl,gpu_thrust,GPU,double,trotter,240,170,70.83,16,20,20,24,12 16 20 24,55.6522,55.7279,0.3839,0.088338,472.316,744.227
