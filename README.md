@@ -56,11 +56,79 @@ Working interpretation:
 - The clean-start per-slice runs are the canonical frontier measurements.
 - The sustained batch campaign is still useful, but it acts more like an endurance test than a clean ceiling measurement.
 
-### Public-safe overview
+### Benchmark Figure Guide
+
+These figures summarize the benchmark campaign that was run on this machine. This is not neural-network training; in this repository, "training run" refers to the long benchmark execution campaign that repeatedly simulated quantum circuits until stable limits, timing behavior, memory use, and failure boundaries were observed.
+
+Unless a caption says otherwise, time values are measured in seconds. Memory plots use either MiB/MB or GiB as stated in the axis label. Qubit counts are logical simulated qubits, not physical hardware qubits.
+
+#### Machine Frontier Overview
 
 ![Current machine frontier overview](docs/assets/current_machine_frontier_overview.png)
 
+This chart shows the stable simulation frontier by benchmark slice. The X axis lists each slice as `device / precision / circuit family`, such as `CPU/double ghz` or `GPU/single trotter`. The Y axis is `stable max qubits`, meaning the largest qubit count that completed reliably for that slice. Higher bars mean the local machine could simulate larger statevectors for that combination.
+
 ![Current machine hardware overview](docs/assets/current_machine_hardware_overview.png)
+
+This figure combines the public-safe machine specification with resource envelopes. The memory panel uses GiB on the X axis and compares system RAM, safe RAM budget, GPU VRAM, and safe VRAM budget. The capability panel uses benchmark target type on the X axis and recommended maximum qubits on the Y axis. It explains why the later benchmark frontiers cluster around the high-20-qubit range on this workstation.
+
+#### cuQuantum Campaign Overview
+
+![cuQuantum rows by profile](docs/assets/cuquantum_campaign_rows_by_profile.png)
+
+This stacked bar chart shows how many non-warmup benchmark rows each cuQuantum campaign produced. The X axis is the campaign profile, such as `speed-sweep`, `exact-frontier`, `observable-frontier`, `ideal-depth`, and `noisy-depth`. The Y axis is row count. Green segments are successful rows; red segments are failed, pruned, or hardware-boundary rows. In frontier-style tests, the red portion is not simply noise: it marks where the machine or WSL/GPU stack stopped completing the requested workload.
+
+![cuQuantum success rate by campaign](docs/assets/cuquantum_campaign_success_rate.png)
+
+This chart converts the same campaigns into non-warmup success percentage. The X axis is the campaign profile. The Y axis is success rate in percent, from `0` to `100`. The `speed-sweep` campaign reached `100%`, while frontier and depth campaigns intentionally pushed into failure zones, so low percentages there mean the test successfully mapped boundaries rather than only collecting easy successes.
+
+![cuQuantum speed sweep 28q simulation time](docs/assets/cuquantum_speed_sweep_28q_simulate_time.png)
+
+This chart compares the median pure simulation time at `28q`. The X axis is the circuit family: `ansatz`, `ghz`, `random`, and `trotter`. The Y axis is `median simulate_s`, measured in seconds. Each grouped bar is a simulator variant: CPU statevector, GPU thrust, or GPU cuStateVec. This isolates simulator execution time from surrounding runner overhead and shows that GPU acceleration is workload-dependent rather than automatically faster for every circuit family.
+
+![cuQuantum noisy stable frontier](docs/assets/cuquantum_noisy_stable_frontier.png)
+
+This chart shows the stable frontier for noisy sampled simulations. The X axis combines simulator variant and circuit family, such as `cpu_statevector / ghz` or `gpu_thrust / trotter`. The Y axis is stable max qubits. The main reading is that noisy sampled circuits are harder than ideal statevector speed sweeps: GHZ remained stable through `20q`, while ansatz and trotter stabilized lower, around `16q`, for the CPU and GPU thrust paths.
+
+![cuQuantum noisy TVD by depth](docs/assets/cuquantum_noisy_tvd_by_depth_12q.png)
+
+This line chart tracks noise-induced distribution drift for `12q` noisy runs. The X axis is circuit depth, meaning the number of repeated circuit layers configured by the profile. The Y axis is median TVD, or total variation distance, which is unitless. `0` means the noisy sampled distribution matched the ideal/reference distribution; larger values mean the measured probability distribution moved farther away. Each line is a simulator variant plus circuit family pair.
+
+#### Clean GHZ Frontier Scaling
+
+![CPU double GHZ time vs qubits](docs/assets/frontier_cpu_double_ghz_time_vs_qubits.png)
+
+This plot shows CPU double-precision GHZ timing as qubit count increases. The X axis is qubits. The Y axis is wall-clock time in seconds. Because statevector simulation scales exponentially with qubits, the curve is expected to rise sharply near the practical frontier.
+
+![GPU double GHZ time vs qubits](docs/assets/frontier_gpu_double_ghz_time_vs_qubits.png)
+
+This plot shows GPU double-precision GHZ timing. The X axis is qubits and the Y axis is wall-clock time in seconds. It should be read together with the memory plots below: a point can be fast enough at one qubit count but become unstable once memory pressure reaches the WSL/GPU envelope.
+
+![GPU double GHZ RAM vs qubits](docs/assets/frontier_gpu_double_ghz_ram_vs_qubits.png)
+
+This chart tracks host-side RAM pressure for the GPU double GHZ run. The X axis is qubits. The Y axis is peak RSS in MB, meaning the maximum resident memory used by the process on the host side. This is not VRAM; it is system memory used by Python, Qiskit Aer, orchestration, and supporting allocations.
+
+![GPU double GHZ VRAM vs qubits](docs/assets/frontier_gpu_double_ghz_vram_vs_qubits.png)
+
+This chart tracks GPU memory pressure for the same GPU double GHZ slice. The X axis is qubits. The Y axis is peak GPU memory in MB. This is the most direct view of how much VRAM was consumed while simulating larger statevectors on the RTX A2000 12GB.
+
+![GPU single GHZ time vs qubits](docs/assets/frontier_gpu_single_ghz_time_vs_qubits.png)
+
+This plot shows GPU single-precision GHZ timing. The X axis is qubits and the Y axis is wall-clock time in seconds. Single precision uses less memory per amplitude than double precision, so it can sometimes improve the frontier, but the final stable limit still depends on backend behavior, WSL stability, and circuit structure.
+
+#### Development And WSL Comparison Snapshots
+
+![Windows dev time vs qubits](docs/assets/time_vs_qubits_windows_dev.png)
+
+This development snapshot shows wall-clock time scaling on the native Windows development path. The X axis is qubits and the Y axis is median wall time in seconds. It is useful as a smoke-test view of CPU-side execution and harness overhead, but it is not the canonical NVIDIA GPU path for this machine.
+
+![WSL Qiskit time vs qubits](docs/assets/time_vs_qubits_wsl_qiskit.png)
+
+This companion plot shows wall-clock time scaling on the WSL2 Qiskit path. The X axis is qubits and the Y axis is median wall time in seconds. It helps compare the Linux/WSL execution route against the native Windows development route.
+
+![WSL Qiskit GPU CPU speedup](docs/assets/gpu_cpu_speedup_wsl_qiskit.png)
+
+This chart shows GPU/CPU speedup using median wall time. The X axis is qubits. The Y axis is a unitless speedup ratio computed as `CPU median wall_s / GPU median wall_s`. A value above `1.0` means the GPU path was faster; a value below `1.0` means the CPU path was faster for that matched circuit point. The horizontal `1.0` line is the break-even point.
 
 ### Detailed hardware specification
 
@@ -77,24 +145,6 @@ Working interpretation:
 | Safe VRAM budget used by the probe | `9.1 GiB` |
 | Driver / CUDA | `581.42 / 13.0` |
 | Python / Qiskit / Aer | `3.12.3 / 1.4.5 / 0.15.1` |
-
-### Selected figures
-
-CPU double GHZ:
-
-![CPU double GHZ time vs qubits](docs/assets/frontier_cpu_double_ghz_time_vs_qubits.png)
-
-GPU double GHZ:
-
-![GPU double GHZ time vs qubits](docs/assets/frontier_gpu_double_ghz_time_vs_qubits.png)
-
-![GPU double GHZ RAM vs qubits](docs/assets/frontier_gpu_double_ghz_ram_vs_qubits.png)
-
-![GPU double GHZ VRAM vs qubits](docs/assets/frontier_gpu_double_ghz_vram_vs_qubits.png)
-
-GPU single GHZ:
-
-![GPU single GHZ time vs qubits](docs/assets/frontier_gpu_single_ghz_time_vs_qubits.png)
 
 For the full write-up, methodology notes, and the structured public-safe summaries, see:
 
