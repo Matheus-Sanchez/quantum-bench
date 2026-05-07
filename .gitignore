@@ -3,6 +3,30 @@
 __pycache__/
 *.py[cod]
 
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+!.env.template
+*.secret
+*.secrets
+secrets/
+credentials/
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+.netrc
+.aws/
+.azure/
+.kaggle/
+.config/gcloud/
+.docker/config.json
+
+# Local machine and run artifacts
 artifacts/
 results/
 plots/
@@ -12,6 +36,17 @@ logs/
 *.zip
 .codex
 .codex/
+*.log
+*.pid
+nohup.out
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor and test caches
+.vscode/
+.idea/
+*.code-workspace
 
 .pytest_cache/
 .mypy_cache/
